@@ -7,6 +7,12 @@
   "types": "./lib/index.d.ts",
   "unpkg": "./umd/index.js",
   "jsdelivr": "./umd/index.js",
+  "files": [
+    "./esm/*",
+    "./lib/*",
+    "./dist/*",
+    "./umd/*"
+  ],
   "browser": {
     "./lib/node-worker.cjs": "./lib/worker.cjs"
   },
@@ -93,7 +99,9 @@
     "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\" && SC=cpGHPages npm run script",
     "build:docs": "typedoc --plugin typedoc-plugin-markdown --hideBreadcrumbs --readme none --disableSources --excludePrivate --excludeProtected --githubPages false --out docs/ src/index.ts",
     "test": "TS_NODE_PROJECT=test/tsconfig.json uvu -b -r ts-node/register test",
-    "prepack": "npm run build && npm run test"
+    "prepack": "npm run build && npm run test",
+    "postversion": "git push --follow-tags && npm publish",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@parcel/service-worker": "^2.9.3",
