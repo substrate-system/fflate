@@ -80,10 +80,12 @@
   "devDependencies": {
     "@parcel/service-worker": "^2.9.3",
     "@substrate-system/debug": "^0.7.2",
+    "@substrate-system/util": "^0.1.15",
     "@types/node": "^22.10.0",
     "@types/pako": "*",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
+    "assert": "^2.1.0",
     "auto-changelog": "^2.5.0",
     "esbuild": "^0.24.0",
     "jszip": "^3.5.0",
@@ -99,6 +101,7 @@
     "tiny-inflate": "*",
     "typedoc": "^0.27.0",
     "typescript": "^5.7.2",
+    "uint8arrays": "^5.1.0",
     "uvu": "^0.3.3",
     "uzip": "*",
     "vite": "^6.0.1"

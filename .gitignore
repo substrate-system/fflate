@@ -2,6 +2,7 @@ node_modules/
 lib/
 esm/
 .DS_STORE
+dist/*
 # Rust version - available when ready
 rs/*/target/
 rs/*/Cargo.lock
@@ -10,5 +11,4 @@ rs/*/Cargo.lock
 umd/
 # for demo
 .parcel-cache
-dist/docs
 docs

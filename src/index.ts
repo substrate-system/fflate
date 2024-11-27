@@ -3182,36 +3182,59 @@ export class Zip {
 }
 
 /**
- * Asynchronously creates a ZIP file
+ * Asynchronously create a ZIP file.
+ *
  * @param data The directory structure for the ZIP archive
  * @param opts The main options, merged with per-file options
  * @param cb The callback to call with the generated ZIP archive
  * @returns A function that can be used to immediately terminate the compression
  */
-export function zip(data: AsyncZippable, opts: AsyncZipOptions, cb: FlateCallback): AsyncTerminable;
+export function zip (
+  data:AsyncZippable,
+  opts:AsyncZipOptions,
+  cb:FlateCallback
+):AsyncTerminable;
+
 /**
- * Asynchronously creates a ZIP file
+ * Asynchronously create a ZIP file.
+ *
  * @param data The directory structure for the ZIP archive
  * @param cb The callback to call with the generated ZIP archive
  * @returns A function that can be used to immediately terminate the compression
  */
-export function zip(data: AsyncZippable, cb: FlateCallback): AsyncTerminable;
-export function zip(data: AsyncZippable, opts: AsyncZipOptions | FlateCallback, cb?: FlateCallback) {
+export function zip(
+  data:AsyncZippable,
+  cb:FlateCallback
+):AsyncTerminable;
+
+export function zip (
+  data:AsyncZippable,
+  opts:AsyncZipOptions|FlateCallback,
+  cb?:FlateCallback
+):AsyncTerminable {
   if (!cb) cb = opts as FlateCallback, opts = {};
   if (typeof cb != 'function') err(7);
-  const r: FlatZippable<true> = {};
+
+  const r:FlatZippable<true> = {};
   fltn(data, '', r, opts as AsyncZipOptions);
-  const k = Object.keys(r);
-  let lft = k.length, o = 0, tot = 0;
+
+  const keys = Object.keys(r);
+  let lft = keys.length
+  let o = 0
+  let tot = 0
+
   const slft = lft, files = new Array<AsyncZipDat>(lft);
-  const term: AsyncTerminable[] = [];
+  const term:AsyncTerminable[] = [];
   const tAll = () => {
     for (let i = 0; i < term.length; ++i) term[i]();
   }
+
   let cbd: FlateCallback = (a, b) => {
     mt(() => { cb(a, b); });
   }
+
   mt(() => { cbd = cb; });
+
   const cbf = () => {
     const out = new u8(tot + 22), oe = o, cdl = tot - o;
     tot = 0;
@@ -3231,10 +3254,12 @@ export function zip(data: AsyncZippable, opts: AsyncZipOptions | FlateCallback, 
     wzf(out, o, files.length, cdl, oe);
     cbd(null, out);
   }
+
   if (!lft) cbf();
+
   // Cannot use lft because it can decrease
   for (let i = 0; i < slft; ++i) {
-    const fn = k[i];
+    const fn = keys[i];
     const [file, p] = r[fn];
     const c = crc(), size = file.length;
     c.p(file);
@@ -3272,7 +3297,18 @@ export function zip(data: AsyncZippable, opts: AsyncZipOptions | FlateCallback, 
       }
     } else term.push(deflate(file, p, cbl));
   }
+
   return tAll;
+}
+
+export async function createZippable (list:FileList):Promise<AsyncZippable> {
+  const zippable = await Array.from(list).reduce(async (_acc, file) => {
+    const acc = await _acc
+    acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
+    return acc
+  }, Promise.resolve({}) as Promise<Record<string, Uint8Array>>)
+
+  return zippable
 }
 
 /**
