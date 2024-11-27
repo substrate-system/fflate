@@ -3301,10 +3301,22 @@ export function zip (
   return tAll;
 }
 
+/**
+ * Flatten directory structure. Return an object of files where the keys
+ * are the folder path.
+ * 
+ * @example
+ * ```js
+ * {
+ *   'name/hello': 
+ * }
+ * ```
+ */
 export async function createZippable (list:FileList):Promise<AsyncZippable> {
   const zippable = await Array.from(list).reduce(async (_acc, file) => {
     const acc = await _acc
     acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
+
     return acc
   }, Promise.resolve({}) as Promise<Record<string, Uint8Array>>)
 

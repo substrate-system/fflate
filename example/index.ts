@@ -14,18 +14,19 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
     debug('submit', ev)
     const form = (ev.target as HTMLFormElement)
     const files = (form['file'] as HTMLInputElement).files!
-    debug('the files', files)
     
-    const zippable = await Array.from(files).reduce(async (_acc, file) => {
-        const acc = await _acc
-        acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
-        return acc
-    }, Promise.resolve({}) as Promise<Record<string, Uint8Array>>)
+    // const zippable = await Array.from(files).reduce(async (_acc, file) => {
+    //     const acc = await _acc
+    //     acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
+    //     return acc
+    // }, Promise.resolve({}) as Promise<Record<string, Uint8Array>>)
 
-    debug('pre zip', zippable)
+    const zippable = await createZippable(files)
+
+    debug('zippable', zippable)
 
     const preZipSize = Object.keys(zippable).reduce((total, key) => {
-        return total + zippable[key].length
+        return total + (zippable[key] as Uint8Array).length
     }, 0)
     debug('size, before zipping...', humanFilesize(preZipSize))
 
@@ -33,7 +34,6 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
         level: 6
     }, (err, data) => {
         if (err) throw err
-        debug('the zipped data...', data)
         debug('size, after zipping...', humanFilesize(data.length))
 
         // now unzip
@@ -47,7 +47,7 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
 
             debug('unzipped equals zipped???', equals(
                 data['abc/test.txt'],
-                zippable['abc/test.txt']
+                zippable['abc/test.txt'] as Uint8Array
             ))
         })
     }

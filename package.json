@@ -3,16 +3,10 @@
   "version": "0.8.3",
   "type": "module",
   "description": "High performance (de)compression in an 8kB package",
-  "main": "./lib/index.cjs",
-  "module": "./esm/browser.js",
-  "types": "./lib/index.d.ts",
-  "unpkg": "./umd/index.js",
-  "jsdelivr": "./umd/index.js",
+  "module": "./dist/browser.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "./esm/*",
-    "./lib/*",
-    "./dist/*",
-    "./umd/*"
+    "./dist/*"
   ],
   "browser": {
     "./lib/node-worker.cjs": "./lib/worker.cjs"
@@ -23,25 +17,17 @@
         "import": {
           "types": "./esm/index.d.mts",
           "default": "./esm/index.mjs"
-        },
-        "require": {
-          "types": "./lib/node.d.cts",
-          "default": "./lib/node.cjs"
         }
       },
       "import": {
         "types": "./dist/browser.d.ts",
         "default": "./dist/browser.js"
-      },
-      "require": {
-        "types": "./lib/browser.d.cts",
-        "default": "./lib/browser.cjs"
       }
     },
     "./node": {
       "import": {
-        "types": "./esm/index.d.mts",
-        "default": "./esm/index.mjs"
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
       },
       "require": {
         "types": "./lib/node.d.cts",
@@ -62,19 +48,18 @@
   "scripts": {
     "start": "vite",
     "script": "node -r ts-node/register scripts/$SC.ts",
-    "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-esm && npm run build-esm:min",
+    "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-esm && npm run build-esm:min && npm run build-cjs && npm run build-cjs:min",
     "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
     "build-esm:min": "esbuild ./src/*.ts --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
-    "build:lib": "tsc && tsc --project tsconfig.esm.json && npm run build:rewrite && npm run build:umd",
-    "build:umd": "SC=buildUMD npm run script",
-    "build:rewrite": "SC=rewriteBuilds npm run script",
-    "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\"",
+    "build-cjs": "esbuild src/*.ts --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
+    "build-cjs:min": "esbuild src/*.ts --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
     "build:docs": "typedoc ./src/index.ts",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
     "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
     "postversion": "git push --follow-tags && npm publish",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {},
   "devDependencies": {
     "@parcel/service-worker": "^2.9.3",
     "@substrate-system/debug": "^0.7.2",
@@ -112,11 +97,8 @@
   },
   "sideEffects": false,
   "homepage": "https://101arrowz.github.io/fflate",
-  "repository": "https://github.com/101arrowz/fflate",
-  "bugs": {
-    "email": "arjunbarrett@gmail.com",
-    "url": "https://github.com/101arrowz/fflate/issues"
-  },
+  "repository": "https://github.com/substrate-system/fflate",
+  "bugs": "https://github.com/substrate-system/fflate/issues",
   "author": "Arjun Barrett <arjunbarrett@gmail.com>",
   "keywords": [
     "gzip",

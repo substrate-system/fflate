@@ -1,16 +1,35 @@
 # fflate
+[![types](https://img.shields.io/npm/types/@substrate-system/fflate?style=flat-square)](README.md)
+[![module](https://img.shields.io/badge/module-ESM%2FCJS-blue?style=flat-square)](README.md)
+[![semantic versioning](https://img.shields.io/badge/semver-2.0.0-blue?logo=semver&style=flat-square)](https://semver.org/)
+[![Common Changelog](https://nichoth.github.io/badge/common-changelog.svg)](./CHANGELOG.md)
+[![install size](https://flat.badgen.net/packagephobia/install/@nichoth/session-cookie)](https://packagephobia.com/result?p=@nichoth/session-cookie)
+[![dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen.svg?style=flat-square)](package.json)
+[![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
+
+
 High performance (de)compression in an 8kB package
+
 
 <details><summary><h2>Contents</h2></summary>
 
 <!-- toc -->
 
+- [fork](#fork)
 - [Why fflate?](#why-fflate)
 - [Types](#types)
   * [AsyncZippable](#asynczippable)
   * [AsyncZippableFile](#asynczippablefile)
 - [Demo](#demo)
-- [Usage](#usage)
+- [Install](#install)
+- [Use](#use)
+- [Auto-detect file format](#auto-detect-file-format)
+- [String conversion API](#string-conversion-api)
+- [binary strings](#binary-strings)
+- [streams](#streams)
+- [Create multi-file zip archives](#create-multi-file-zip-archives)
+- [Customize](#customize)
+- [Async API](#async-api)
 - [Bundle size estimates](#bundle-size-estimates)
 - [What makes `fflate` so fast?](#what-makes-fflate-so-fast)
 - [What about `CompressionStream`?](#what-about-compressionstream)
@@ -21,6 +40,9 @@ High performance (de)compression in an 8kB package
 <!-- tocstop -->
 
 </details>
+
+## fork
+This is a fork of [101arrowz/fflate](https://github.com/101arrowz/fflate).
 
 ## Why fflate?
 `fflate` (short for fast flate) is the **fastest, smallest, and most versatile** pure JavaScript compression and decompression library in existence, handily beating [`pako`](https://npmjs.com/package/pako), [`tiny-inflate`](https://npmjs.com/package/tiny-inflate), and [`UZIP.js`](https://github.com/photopea/UZIP.js) in performance benchmarks while being multiple times more lightweight. Its compression ratios are often better than even the original Zlib C library. It includes support for DEFLATE, GZIP, and Zlib data. Data compressed by `fflate` can be decompressed by other tools, and vice versa.
@@ -44,14 +66,19 @@ In addition to the base decompression and compression APIs, `fflate` supports hi
 | Streaming ZIP support       | ❌     | ❌                      | ❌                    | ✅                             |
 | Uses ES Modules             | ❌     | ❌                      | ❌                    | ✅                             |
 
+-----------------------------------------------------------------
+
+
+
 ## Types
 
 ### AsyncZippable
-An object with paths pointing at arrays of files, e.g.
+A flat object with paths pointing at files, e.g.
 
 ```js
 const zippable = {
-  '/abc/def': [myUint8Array]
+  'abc/123/aaa.txt': anotherUint8Array,
+  'abc/def.txt': myUint8Array
 }
 ```
 
@@ -80,21 +107,21 @@ type AsyncZippableFile = Uint8Array |
 ## Demo
 If you'd like to try `fflate` for yourself without installing it, you can take a look at the [browser demo](https://101arrowz.github.io/fflate). Since `fflate` is a pure JavaScript library, it works in both the browser and Node.js (see [Browser support](https://github.com/101arrowz/fflate/#browser-support) for more info).
 
-## Usage
-
+## Install
 Install `fflate`:
+
 ```sh
-npm i fflate # or yarn add fflate, or pnpm add fflate
+npm i -S @substrate-system/fflate  # or yarn add fflate, or pnpm add fflate
 ```
 
 Import:
 ```js
 // I will assume that you use the following for the rest of this guide
-import * as fflate from 'fflate';
+import * as fflate from '@substrate-system/fflate';
 
 // However, you should import ONLY what you need to minimize bloat.
 // So, if you just need GZIP compression support:
-import { gzipSync } from 'fflate';
+import { gzipSync } from '@substrate-system/fflate';
 // Woo! You just saved 20 kB off your bundle with one line.
 ```
 
@@ -102,7 +129,7 @@ If your environment doesn't support ES Modules (e.g. Node.js):
 ```js
 // Try to avoid this when using fflate in the browser, as it will import
 // all of fflate's components, even those that you aren't using.
-const fflate = require('fflate');
+const fflate = require('@substrate-system/fflate');
 ```
 
 If you want to load from a CDN in the browser:
@@ -133,18 +160,13 @@ If you are using Deno:
 import * as fflate from 'https://cdn.skypack.dev/fflate@0.8.2?min';
 ```
 
-
 If your environment doesn't support bundling:
 ```js
 // Again, try to import just what you need
-
-// For the browser:
-import * as fflate from 'fflate/esm/browser.js';
-// If the standard ESM import fails on Node (i.e. older version):
-import * as fflate from 'fflate/esm';
 ```
 
-And use:
+## Use
+
 ```js
 // This is an ArrayBuffer of data
 const massiveFileBuf = await fetch('/aMassiveFile').then(
@@ -168,7 +190,11 @@ const gzipped = fflate.gzipSync(massiveFile, {
   mtime: '9/1/16 2:00 PM'
 });
 ```
+
+## Auto-detect file format
+
 `fflate` can autodetect a compressed file's format as well:
+
 ```js
 const compressed = new Uint8Array(
   await fetch('/GZIPorZLIBorDEFLATE').then(res => res.arrayBuffer())
@@ -179,7 +205,9 @@ const compressed = new Uint8Array(
 const decompressed = fflate.decompressSync(compressed);
 ```
 
+## String conversion API
 Using strings is easy with `fflate`'s string conversion API:
+
 ```js
 const buf = fflate.strToU8('Hello world!');
 
@@ -193,6 +221,8 @@ const decompressed = fflate.decompressSync(compressed);
 const origText = fflate.strFromU8(decompressed);
 console.log(origText); // Hello world!
 ```
+
+## binary strings
 
 If you need to use an (albeit inefficient) binary string, you can set the second argument to `true`.
 ```js
@@ -214,6 +244,8 @@ const origText = fflate.strFromU8(decompressed);
 console.log(origText); // Hello world!
 ```
 
+## streams
+
 You can use streams as well to incrementally add data to be compressed or decompressed:
 ```js
 // This example uses synchronous streams, but for the best experience
@@ -233,7 +265,7 @@ gzipStream.ondata = (chunk, final) => { ... }
 gzipStream.push(chunk1);
 gzipStream.push(chunk2);
 
-...
+// ...
 
 // You should mark the last chunk by using true in the second argument
 // In addition to being necessary for the stream to work properly, this
@@ -287,7 +319,10 @@ dcmpStrm.push(zlibJSONData2, true);
 console.log(JSON.parse(stringData));
 ```
 
+## Create multi-file zip archives
+
 You can create multi-file ZIP archives easily as well. Note that by default, compression is enabled for all files, which is not useful when ZIPping many PNGs, JPEGs, PDFs, etc. because those formats are already compressed. You should either override the level on a per-file basis or globally to avoid wasting resources.
+
 ```js
 // Note that the asynchronous version (see below) runs in parallel and
 // is *much* (up to 3x) faster for larger archives.
@@ -356,6 +391,7 @@ const decompressed = fflate.unzipSync(zipped, {
 });
 ```
 
+## Customize
 If you need extremely high performance or custom ZIP compression formats, you can use the highly-extensible ZIP streams. They take streams as both input and output. You can even use custom compression/decompression algorithms from other libraries, as long as they [are defined in the ZIP spec](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (see section 4.4.5). If you'd like more info on using custom compressors, [feel free to ask](https://github.com/101arrowz/fflate/discussions).
 ```js
 // ZIP object
@@ -430,6 +466,7 @@ unzipper.push(zipChunk2);
 unzipper.push(zipChunk3, true);
 ```
 
+## Async API
 As you may have guessed, there is an asynchronous version of every method as well. Unlike most libraries, this will cause the compression or decompression run in a separate thread entirely and automatically by using Web (or Node) Workers. This means that the processing will not block the main thread at all. 
 
 Note that there is a significant initial overhead to using workers of about 50ms for each asynchronous function. For instance, if you call `unzip` ten times, the overhead only applies for the first call, but if you call `unzip` and `zlib`, they will each cause the 50ms delay. For small (under about 50kB) payloads, the asynchronous APIs will be much slower. However, if you're compressing larger files/multiple files at once, or if the synchronous API causes the main thread to hang for too long, the callback APIs are an order of magnitude better.
