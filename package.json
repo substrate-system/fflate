@@ -61,7 +61,6 @@
   },
   "scripts": {
     "start": "vite",
-    "//build": "npm run build:lib && npm run build:docs && npm run build:demo",
     "script": "node -r ts-node/register scripts/$SC.ts",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-esm && npm run build-esm:min",
     "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
@@ -71,7 +70,6 @@
     "build:rewrite": "SC=rewriteBuilds npm run script",
     "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\"",
     "build:docs": "typedoc ./src/index.ts",
-    "test": "TS_NODE_PROJECT=test/tsconfig.json uvu -b -r ts-node/register test",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
     "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
     "postversion": "git push --follow-tags && npm publish",
