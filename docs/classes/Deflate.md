@@ -21,7 +21,7 @@ Streaming DEFLATE compression
 
 ### constructor
 
-• **new Deflate**(`opts`, `cb?`)
+• **new Deflate**(`opts`, `cb?`): [`Deflate`](Deflate.md)
 
 Creates a DEFLATE stream
 
@@ -32,7 +32,11 @@ Creates a DEFLATE stream
 | `opts` | [`DeflateOptions`](../interfaces/DeflateOptions.md) | The compression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new Deflate**(`cb?`)
+#### Returns
+
+[`Deflate`](Deflate.md)
+
+• **new Deflate**(`cb?`): [`Deflate`](Deflate.md)
 
 Creates a DEFLATE stream
 
@@ -41,6 +45,10 @@ Creates a DEFLATE stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`Deflate`](Deflate.md)
 
 ## Properties
 

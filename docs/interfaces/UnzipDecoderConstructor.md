@@ -16,7 +16,7 @@ A constructor for a decoder for unzip streams
 
 ### constructor
 
-• **new UnzipDecoderConstructor**(`filename`, `size?`, `originalSize?`)
+• **new UnzipDecoderConstructor**(`filename`, `size?`, `originalSize?`): [`UnzipDecoder`](UnzipDecoder.md)
 
 Creates an instance of the decoder
 
@@ -27,6 +27,10 @@ Creates an instance of the decoder
 | `filename` | `string` | The name of the file |
 | `size?` | `number` | The compressed size of the file |
 | `originalSize?` | `number` | The original size of the file |
+
+#### Returns
+
+[`UnzipDecoder`](UnzipDecoder.md)
 
 ## Properties
 

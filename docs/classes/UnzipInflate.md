@@ -26,9 +26,13 @@ better performance.
 
 ### constructor
 
-• **new UnzipInflate**()
+• **new UnzipInflate**(): [`UnzipInflate`](UnzipInflate.md)
 
 Creates a DEFLATE decompression that can be used in ZIP archives
+
+#### Returns
+
+[`UnzipInflate`](UnzipInflate.md)
 
 ## Properties
 

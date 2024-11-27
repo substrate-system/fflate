@@ -21,7 +21,7 @@ Streaming single or multi-member GZIP decompression
 
 ### constructor
 
-• **new Gunzip**(`opts`, `cb?`)
+• **new Gunzip**(`opts`, `cb?`): [`Gunzip`](Gunzip.md)
 
 Creates a GUNZIP stream
 
@@ -32,7 +32,11 @@ Creates a GUNZIP stream
 | `opts` | [`GunzipStreamOptions`](../interfaces/GunzipStreamOptions.md) | The decompression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is inflated |
 
-• **new Gunzip**(`cb?`)
+#### Returns
+
+[`Gunzip`](Gunzip.md)
+
+• **new Gunzip**(`cb?`): [`Gunzip`](Gunzip.md)
 
 Creates a GUNZIP stream
 
@@ -41,6 +45,10 @@ Creates a GUNZIP stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is inflated |
+
+#### Returns
+
+[`Gunzip`](Gunzip.md)
 
 ## Properties
 

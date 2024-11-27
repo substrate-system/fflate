@@ -26,7 +26,7 @@ Asynchronous streaming DEFLATE decompression for ZIP archives
 
 ### constructor
 
-• **new AsyncUnzipInflate**(`_`, `sz?`)
+• **new AsyncUnzipInflate**(`_`, `sz?`): [`AsyncUnzipInflate`](AsyncUnzipInflate.md)
 
 Creates a DEFLATE decompression that can be used in ZIP archives
 
@@ -36,6 +36,10 @@ Creates a DEFLATE decompression that can be used in ZIP archives
 | :------ | :------ |
 | `_` | `string` |
 | `sz?` | `number` |
+
+#### Returns
+
+[`AsyncUnzipInflate`](AsyncUnzipInflate.md)
 
 ## Properties
 

@@ -36,7 +36,7 @@ Asynchronous streaming DEFLATE compression for ZIP archives
 
 ### constructor
 
-• **new AsyncZipDeflate**(`filename`, `opts?`)
+• **new AsyncZipDeflate**(`filename`, `opts?`): [`AsyncZipDeflate`](AsyncZipDeflate.md)
 
 Creates an asynchronous DEFLATE stream that can be added to ZIP archives
 
@@ -46,6 +46,10 @@ Creates an asynchronous DEFLATE stream that can be added to ZIP archives
 | :------ | :------ | :------ |
 | `filename` | `string` | The filename to associate with this data stream |
 | `opts?` | [`DeflateOptions`](../interfaces/DeflateOptions.md) | The compression options |
+
+#### Returns
+
+[`AsyncZipDeflate`](AsyncZipDeflate.md)
 
 ## Properties
 
@@ -127,7 +131,7 @@ ___
 
 ### extra
 
-• `Optional` **extra**: `Record`<`number`, `Uint8Array`\>
+• `Optional` **extra**: `Record`\<`number`, `Uint8Array`\>
 
 Extra metadata to add to the file. This field is defined by PKZIP's APPNOTE.txt,
 section 4.4.28. At most 65,535 bytes may be used in each ID. The ID must be an
@@ -158,7 +162,7 @@ ___
 
 ### flag
 
-• **flag**: ``0`` \| ``2`` \| ``1`` \| ``3``
+• **flag**: ``0`` \| ``1`` \| ``2`` \| ``3``
 
 Bits 1 and 2 of the general purpose bit flag, specified in PKZIP's
 APPNOTE.txt, section 4.4.4. Should be between 0 and 3. This is unlikely

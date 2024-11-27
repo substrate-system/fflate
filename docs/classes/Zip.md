@@ -22,7 +22,7 @@ A zippable archive to which files can incrementally be added
 
 ### constructor
 
-• **new Zip**(`cb?`)
+• **new Zip**(`cb?`): [`Zip`](Zip.md)
 
 Creates an empty ZIP archive to which files can be added
 
@@ -31,6 +31,10 @@ Creates an empty ZIP archive to which files can be added
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data for the generated ZIP archive is available |
+
+#### Returns
+
+[`Zip`](Zip.md)
 
 ## Properties
 

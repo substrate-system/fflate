@@ -21,7 +21,7 @@ Streaming Zlib compression
 
 ### constructor
 
-• **new Zlib**(`opts`, `cb?`)
+• **new Zlib**(`opts`, `cb?`): [`Zlib`](Zlib.md)
 
 Creates a Zlib stream
 
@@ -32,7 +32,11 @@ Creates a Zlib stream
 | `opts` | [`ZlibOptions`](../interfaces/ZlibOptions.md) | The compression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new Zlib**(`cb?`)
+#### Returns
+
+[`Zlib`](Zlib.md)
+
+• **new Zlib**(`cb?`): [`Zlib`](Zlib.md)
 
 Creates a Zlib stream
 
@@ -41,6 +45,10 @@ Creates a Zlib stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`Zlib`](Zlib.md)
 
 ## Properties
 

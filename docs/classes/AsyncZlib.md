@@ -24,7 +24,7 @@ Asynchronous streaming Zlib compression
 
 ### constructor
 
-• **new AsyncZlib**(`opts`, `cb?`)
+• **new AsyncZlib**(`opts`, `cb?`): [`AsyncZlib`](AsyncZlib.md)
 
 Creates an asynchronous Zlib stream
 
@@ -35,7 +35,11 @@ Creates an asynchronous Zlib stream
 | `opts` | [`ZlibOptions`](../interfaces/ZlibOptions.md) | The compression options |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new AsyncZlib**(`cb?`)
+#### Returns
+
+[`AsyncZlib`](AsyncZlib.md)
+
+• **new AsyncZlib**(`cb?`): [`AsyncZlib`](AsyncZlib.md)
 
 Creates an asynchronous Zlib stream
 
@@ -44,6 +48,10 @@ Creates an asynchronous Zlib stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`AsyncZlib`](AsyncZlib.md)
 
 ## Properties
 

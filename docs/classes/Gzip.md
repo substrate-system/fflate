@@ -21,7 +21,7 @@ Streaming GZIP compression
 
 ### constructor
 
-• **new Gzip**(`opts`, `cb?`)
+• **new Gzip**(`opts`, `cb?`): [`Gzip`](Gzip.md)
 
 Creates a GZIP stream
 
@@ -32,7 +32,11 @@ Creates a GZIP stream
 | `opts` | [`GzipOptions`](../interfaces/GzipOptions.md) | The compression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new Gzip**(`cb?`)
+#### Returns
+
+[`Gzip`](Gzip.md)
+
+• **new Gzip**(`cb?`): [`Gzip`](Gzip.md)
 
 Creates a GZIP stream
 
@@ -41,6 +45,10 @@ Creates a GZIP stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`Gzip`](Gzip.md)
 
 ## Properties
 

@@ -20,7 +20,7 @@ Streaming GZIP, Zlib, or raw DEFLATE decompression
 
 ### constructor
 
-• **new Decompress**(`opts`, `cb?`)
+• **new Decompress**(`opts`, `cb?`): [`Decompress`](Decompress.md)
 
 Creates a decompression stream
 
@@ -31,7 +31,11 @@ Creates a decompression stream
 | `opts` | [`InflateStreamOptions`](../interfaces/InflateStreamOptions.md) | The decompression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is decompressed |
 
-• **new Decompress**(`cb?`)
+#### Returns
+
+[`Decompress`](Decompress.md)
+
+• **new Decompress**(`cb?`): [`Decompress`](Decompress.md)
 
 Creates a decompression stream
 
@@ -40,6 +44,10 @@ Creates a decompression stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is decompressed |
+
+#### Returns
+
+[`Decompress`](Decompress.md)
 
 ## Properties
 

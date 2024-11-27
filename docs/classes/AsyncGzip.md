@@ -24,7 +24,7 @@ Asynchronous streaming GZIP compression
 
 ### constructor
 
-• **new AsyncGzip**(`opts`, `cb?`)
+• **new AsyncGzip**(`opts`, `cb?`): [`AsyncGzip`](AsyncGzip.md)
 
 Creates an asynchronous GZIP stream
 
@@ -35,7 +35,11 @@ Creates an asynchronous GZIP stream
 | `opts` | [`GzipOptions`](../interfaces/GzipOptions.md) | The compression options |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new AsyncGzip**(`cb?`)
+#### Returns
+
+[`AsyncGzip`](AsyncGzip.md)
+
+• **new AsyncGzip**(`cb?`): [`AsyncGzip`](AsyncGzip.md)
 
 Creates an asynchronous GZIP stream
 
@@ -44,6 +48,10 @@ Creates an asynchronous GZIP stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`AsyncGzip`](AsyncGzip.md)
 
 ## Properties
 

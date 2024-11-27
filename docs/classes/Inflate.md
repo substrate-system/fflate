@@ -20,7 +20,7 @@ Streaming DEFLATE decompression
 
 ### constructor
 
-• **new Inflate**(`opts`, `cb?`)
+• **new Inflate**(`opts`, `cb?`): [`Inflate`](Inflate.md)
 
 Creates a DEFLATE decompression stream
 
@@ -31,7 +31,11 @@ Creates a DEFLATE decompression stream
 | `opts` | [`InflateStreamOptions`](../interfaces/InflateStreamOptions.md) | The decompression options |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is inflated |
 
-• **new Inflate**(`cb?`)
+#### Returns
+
+[`Inflate`](Inflate.md)
+
+• **new Inflate**(`cb?`): [`Inflate`](Inflate.md)
 
 Creates a DEFLATE decompression stream
 
@@ -40,6 +44,10 @@ Creates a DEFLATE decompression stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`FlateStreamHandler`](../README.md#flatestreamhandler) | The callback to call whenever data is inflated |
+
+#### Returns
+
+[`Inflate`](Inflate.md)
 
 ## Properties
 

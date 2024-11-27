@@ -25,7 +25,11 @@ Streaming pass-through decompression for ZIP archives
 
 ### constructor
 
-• **new UnzipPassThrough**()
+• **new UnzipPassThrough**(): [`UnzipPassThrough`](UnzipPassThrough.md)
+
+#### Returns
+
+[`UnzipPassThrough`](UnzipPassThrough.md)
 
 ## Properties
 

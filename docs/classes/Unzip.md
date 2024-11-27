@@ -21,7 +21,7 @@ A ZIP archive decompression stream that emits files as they are discovered
 
 ### constructor
 
-• **new Unzip**(`cb?`)
+• **new Unzip**(`cb?`): [`Unzip`](Unzip.md)
 
 Creates a ZIP decompression stream
 
@@ -30,6 +30,10 @@ Creates a ZIP decompression stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`UnzipFileHandler`](../README.md#unzipfilehandler) | The callback to call whenever a file in the ZIP archive is found |
+
+#### Returns
+
+[`Unzip`](Unzip.md)
 
 ## Properties
 

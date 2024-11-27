@@ -33,7 +33,7 @@ A pass-through stream to keep data uncompressed in a ZIP archive.
 
 ### constructor
 
-• **new ZipPassThrough**(`filename`)
+• **new ZipPassThrough**(`filename`): [`ZipPassThrough`](ZipPassThrough.md)
 
 Creates a pass-through stream that can be added to ZIP archives
 
@@ -42,6 +42,10 @@ Creates a pass-through stream that can be added to ZIP archives
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `filename` | `string` | The filename to associate with this data stream |
+
+#### Returns
+
+[`ZipPassThrough`](ZipPassThrough.md)
 
 ## Properties
 
@@ -123,7 +127,7 @@ ___
 
 ### extra
 
-• `Optional` **extra**: `Record`<`number`, `Uint8Array`\>
+• `Optional` **extra**: `Record`\<`number`, `Uint8Array`\>
 
 Extra metadata to add to the file. This field is defined by PKZIP's APPNOTE.txt,
 section 4.4.28. At most 65,535 bytes may be used in each ID. The ID must be an

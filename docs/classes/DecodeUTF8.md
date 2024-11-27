@@ -20,7 +20,7 @@ Streaming UTF-8 decoding
 
 ### constructor
 
-• **new DecodeUTF8**(`cb?`)
+• **new DecodeUTF8**(`cb?`): [`DecodeUTF8`](DecodeUTF8.md)
 
 Creates a UTF-8 decoding stream
 
@@ -29,6 +29,10 @@ Creates a UTF-8 decoding stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`StringStreamHandler`](../README.md#stringstreamhandler) | The callback to call whenever data is decoded |
+
+#### Returns
+
+[`DecodeUTF8`](DecodeUTF8.md)
 
 ## Properties
 

@@ -23,7 +23,7 @@ Asynchronous streaming DEFLATE decompression
 
 ### constructor
 
-• **new AsyncInflate**(`opts`, `cb?`)
+• **new AsyncInflate**(`opts`, `cb?`): [`AsyncInflate`](AsyncInflate.md)
 
 Creates an asynchronous DEFLATE decompression stream
 
@@ -34,7 +34,11 @@ Creates an asynchronous DEFLATE decompression stream
 | `opts` | [`InflateStreamOptions`](../interfaces/InflateStreamOptions.md) | The decompression options |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is inflated |
 
-• **new AsyncInflate**(`cb?`)
+#### Returns
+
+[`AsyncInflate`](AsyncInflate.md)
+
+• **new AsyncInflate**(`cb?`): [`AsyncInflate`](AsyncInflate.md)
 
 Creates an asynchronous DEFLATE decompression stream
 
@@ -43,6 +47,10 @@ Creates an asynchronous DEFLATE decompression stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is inflated |
+
+#### Returns
+
+[`AsyncInflate`](AsyncInflate.md)
 
 ## Properties
 

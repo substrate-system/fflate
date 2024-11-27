@@ -140,11 +140,11 @@ Renames and re-exports [gzipSync](README.md#gzipsync)
 
 Ƭ **AsyncFlateDrainHandler**: (`size`: `number`) => `void`
 
+Handler for the asynchronous completion of (de)compression for a data chunk
+
 #### Type declaration
 
 ▸ (`size`): `void`
-
-Handler for the asynchronous completion of (de)compression for a data chunk
 
 ##### Parameters
 
@@ -162,11 +162,11 @@ ___
 
 Ƭ **AsyncFlateStreamHandler**: (`err`: [`FlateError`](interfaces/FlateError.md) \| ``null``, `data`: `Uint8Array`, `final`: `boolean`) => `void`
 
+Handler for asynchronous data (de)compression streams
+
 #### Type declaration
 
 ▸ (`err`, `data`, `final`): `void`
-
-Handler for asynchronous data (de)compression streams
 
 ##### Parameters
 
@@ -194,11 +194,11 @@ ___
 
 Ƭ **FlateCallback**: (`err`: [`FlateError`](interfaces/FlateError.md) \| ``null``, `data`: `Uint8Array`) => `void`
 
+Callback for asynchronous (de)compression methods
+
 #### Type declaration
 
 ▸ (`err`, `data`): `void`
-
-Callback for asynchronous (de)compression methods
 
 ##### Parameters
 
@@ -217,11 +217,11 @@ ___
 
 Ƭ **FlateStreamHandler**: (`data`: `Uint8Array`, `final`: `boolean`) => `void`
 
+Handler for data (de)compression streams
+
 #### Type declaration
 
 ▸ (`data`, `final`): `void`
-
-Handler for data (de)compression streams
 
 ##### Parameters
 
@@ -240,11 +240,11 @@ ___
 
 Ƭ **GunzipMemberHandler**: (`offset`: `number`) => `void`
 
+Handler for new GZIP members in concatenated GZIP streams. Useful for building indices used to perform random-access reads on compressed files.
+
 #### Type declaration
 
 ▸ (`offset`): `void`
-
-Handler for new GZIP members in concatenated GZIP streams. Useful for building indices used to perform random-access reads on compressed files.
 
 ##### Parameters
 
@@ -262,11 +262,11 @@ ___
 
 Ƭ **StringStreamHandler**: (`data`: `string`, `final`: `boolean`) => `void`
 
+Handler for string generation streams
+
 #### Type declaration
 
 ▸ (`data`, `final`): `void`
-
-Handler for string generation streams
 
 ##### Parameters
 
@@ -285,11 +285,11 @@ ___
 
 Ƭ **UnzipCallback**: (`err`: [`FlateError`](interfaces/FlateError.md) \| ``null``, `data`: [`Unzipped`](interfaces/Unzipped.md)) => `void`
 
+Callback for asynchronous ZIP decompression
+
 #### Type declaration
 
 ▸ (`err`, `data`): `void`
-
-Callback for asynchronous ZIP decompression
 
 ##### Parameters
 
@@ -308,11 +308,11 @@ ___
 
 Ƭ **UnzipFileFilter**: (`file`: [`UnzipFileInfo`](interfaces/UnzipFileInfo.md)) => `boolean`
 
+A filter for files to be extracted during the unzipping process
+
 #### Type declaration
 
 ▸ (`file`): `boolean`
-
-A filter for files to be extracted during the unzipping process
 
 ##### Parameters
 
@@ -324,19 +324,17 @@ A filter for files to be extracted during the unzipping process
 
 `boolean`
 
-Whether or not to extract the current file
-
 ___
 
 ### UnzipFileHandler
 
 Ƭ **UnzipFileHandler**: (`file`: [`UnzipFile`](interfaces/UnzipFile.md)) => `void`
 
+Handler for streaming ZIP decompression
+
 #### Type declaration
 
 ▸ (`file`): `void`
-
-Handler for streaming ZIP decompression
 
 ##### Parameters
 

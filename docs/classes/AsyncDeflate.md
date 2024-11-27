@@ -24,7 +24,7 @@ Asynchronous streaming DEFLATE compression
 
 ### constructor
 
-• **new AsyncDeflate**(`opts`, `cb?`)
+• **new AsyncDeflate**(`opts`, `cb?`): [`AsyncDeflate`](AsyncDeflate.md)
 
 Creates an asynchronous DEFLATE stream
 
@@ -35,7 +35,11 @@ Creates an asynchronous DEFLATE stream
 | `opts` | [`DeflateOptions`](../interfaces/DeflateOptions.md) | The compression options |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
 
-• **new AsyncDeflate**(`cb?`)
+#### Returns
+
+[`AsyncDeflate`](AsyncDeflate.md)
+
+• **new AsyncDeflate**(`cb?`): [`AsyncDeflate`](AsyncDeflate.md)
 
 Creates an asynchronous DEFLATE stream
 
@@ -44,6 +48,10 @@ Creates an asynchronous DEFLATE stream
 | Name | Type | Description |
 | :------ | :------ | :------ |
 | `cb?` | [`AsyncFlateStreamHandler`](../README.md#asyncflatestreamhandler) | The callback to call whenever data is deflated |
+
+#### Returns
+
+[`AsyncDeflate`](AsyncDeflate.md)
 
 ## Properties
 

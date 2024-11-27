@@ -62,7 +62,7 @@ ___
 
 ### extra
 
-• `Optional` **extra**: `Record`<`number`, `Uint8Array`\>
+• `Optional` **extra**: `Record`\<`number`, `Uint8Array`\>
 
 Extra metadata to add to the file. This field is defined by PKZIP's APPNOTE.txt,
 section 4.4.28. At most 65,535 bytes may be used in each ID. The ID must be an
