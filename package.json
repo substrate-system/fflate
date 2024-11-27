@@ -99,7 +99,6 @@
     "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\"",
     "build:docs": "typedoc --plugin typedoc-plugin-markdown --hideBreadcrumbs --readme none --disableSources --excludePrivate --excludeProtected --githubPages false --out docs/ src/index.ts",
     "test": "TS_NODE_PROJECT=test/tsconfig.json uvu -b -r ts-node/register test",
-    "prepack": "npm run build && npm run test",
     "postversion": "git push --follow-tags && npm publish",
     "prepublishOnly": "npm run build"
   },
