@@ -1,0 +1,138 @@
+{
+  "inputs": {
+    "src/index.ts": {
+      "bytes": 116605,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/node-worker.ts": {
+      "bytes": 1238,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/worker.ts": {
+      "bytes": 635,
+      "imports": [],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "dist/index.js.map": {
+      "imports": [],
+      "exports": [],
+      "inputs": {},
+      "bytes": 180640
+    },
+    "dist/index.js": {
+      "imports": [
+        {
+          "path": "./node-worker",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "exports": [
+        "AsyncCompress",
+        "AsyncDecompress",
+        "AsyncDeflate",
+        "AsyncGunzip",
+        "AsyncGzip",
+        "AsyncInflate",
+        "AsyncUnzipInflate",
+        "AsyncUnzlib",
+        "AsyncZipDeflate",
+        "AsyncZlib",
+        "Compress",
+        "DecodeUTF8",
+        "Decompress",
+        "Deflate",
+        "EncodeUTF8",
+        "FlateErrorCode",
+        "Gunzip",
+        "Gzip",
+        "Inflate",
+        "Unzip",
+        "UnzipInflate",
+        "UnzipPassThrough",
+        "Unzlib",
+        "Zip",
+        "ZipDeflate",
+        "ZipPassThrough",
+        "Zlib",
+        "compress",
+        "compressSync",
+        "decompress",
+        "decompressSync",
+        "deflate",
+        "deflateSync",
+        "gunzip",
+        "gunzipSync",
+        "gzip",
+        "gzipSync",
+        "inflate",
+        "inflateSync",
+        "strFromU8",
+        "strToU8",
+        "unzip",
+        "unzipSync",
+        "unzlib",
+        "unzlibSync",
+        "zip",
+        "zipSync",
+        "zlib",
+        "zlibSync"
+      ],
+      "entryPoint": "src/index.ts",
+      "inputs": {
+        "src/index.ts": {
+          "bytesInOutput": 66554
+        }
+      },
+      "bytes": 67411
+    },
+    "dist/node-worker.js.map": {
+      "imports": [],
+      "exports": [],
+      "inputs": {},
+      "bytes": 2089
+    },
+    "dist/node-worker.js": {
+      "imports": [
+        {
+          "path": "worker_threads",
+          "kind": "require-call",
+          "external": true
+        }
+      ],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": "src/node-worker.ts",
+      "inputs": {
+        "src/node-worker.ts": {
+          "bytesInOutput": 1027
+        }
+      },
+      "bytes": 1241
+    },
+    "dist/worker.js.map": {
+      "imports": [],
+      "exports": [],
+      "inputs": {},
+      "bytes": 1255
+    },
+    "dist/worker.js": {
+      "imports": [],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": "src/worker.ts",
+      "inputs": {
+        "src/worker.ts": {
+          "bytesInOutput": 583
+        }
+      },
+      "bytes": 787
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/worker.ts"],
+  "sourcesContent": ["const ch2: Record<string, string> = {};\n\nexport default <T>(c: string, id: number, msg: unknown, transfer: ArrayBuffer[], cb: (err: Error, msg: T) => void) => {\n  const w = new Worker(ch2[id] ||= URL.createObjectURL(\n    new Blob([\n      c + ';addEventListener(\"error\",function(e){e=e.error;postMessage({$e$:[e.message,e.code,e.stack]})})'\n    ], { type: 'text/javascript' })\n  ));\n  w.onmessage = e => {\n    const d = e.data, ed = d.$e$;\n    if (ed) {\n      const err = new Error(ed[0]);\n      err['code'] = ed[1];\n      err.stack = ed[2];\n      cb(err, null);\n    } else cb(null, d);\n  }\n  w.postMessage(msg, transfer);\n  return w;\n}"],
+  "mappings": ";;AAAA,MAAM,MAA8B,CAAC;AAErC,IAAO,iBAAQ,wBAAI,GAAW,IAAY,KAAc,UAAyB,OAAqC;AACpH,QAAM,IAAI,IAAI,OAAO,IAAI,EAAE,MAAM,IAAI;AAAA,IACnC,IAAI,KAAK;AAAA,MACP,IAAI;AAAA,IACN,GAAG,EAAE,MAAM,kBAAkB,CAAC;AAAA,EAChC,CAAC;AACD,IAAE,YAAY,OAAK;AACjB,UAAM,IAAI,EAAE,MAAM,KAAK,EAAE;AACzB,QAAI,IAAI;AACN,YAAM,MAAM,IAAI,MAAM,GAAG,CAAC,CAAC;AAC3B,UAAI,MAAM,IAAI,GAAG,CAAC;AAClB,UAAI,QAAQ,GAAG,CAAC;AAChB,SAAG,KAAK,IAAI;AAAA,IACd,MAAO,IAAG,MAAM,CAAC;AAAA,EACnB;AACA,IAAE,YAAY,KAAK,QAAQ;AAC3B,SAAO;AACT,GAjBe;",
+  "names": []
+}

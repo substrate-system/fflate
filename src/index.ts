@@ -10,6 +10,21 @@
 // Sometimes 0 will appear where -1 would be more appropriate. This is because using a uint
 // is better for memory in most engines (I *think*).
 
+/**
+ * The complete directory structure of an asynchronously ZIPpable archive
+ */
+export interface AsyncZippable {
+  [path:string]:AsyncZippableFile;
+}
+
+/**
+ * A file that can be used to asynchronously create a ZIP archive
+ */
+export type AsyncZippableFile = Uint8Array |
+  AsyncZippable |
+  [Uint8Array | AsyncZippable, AsyncZipOptions]
+
+
 import wk from './node-worker';
 
 // aliases for shorter compressed code (most minifers don't do this)
@@ -2472,22 +2487,10 @@ export interface AsyncUnzipOptions extends UnzipOptions {}
 export type ZippableFile = Uint8Array | Zippable | [Uint8Array | Zippable, ZipOptions];
 
 /**
- * A file that can be used to asynchronously create a ZIP archive
- */
-export type AsyncZippableFile = Uint8Array | AsyncZippable | [Uint8Array | AsyncZippable, AsyncZipOptions]
-
-/**
  * The complete directory structure of a ZIPpable archive
  */
 export interface Zippable {
   [path: string]: ZippableFile;
-}
-
-/**
- * The complete directory structure of an asynchronously ZIPpable archive
- */
-export interface AsyncZippable {
-  [path: string]: AsyncZippableFile;
 }
 
 /**

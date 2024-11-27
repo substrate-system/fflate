@@ -1,6 +1,7 @@
 {
   "name": "@substrate-system/fflate",
   "version": "0.8.2",
+  "type": "module",
   "description": "High performance (de)compression in an 8kB package",
   "main": "./lib/index.cjs",
   "module": "./esm/browser.js",
@@ -29,8 +30,8 @@
         }
       },
       "import": {
-        "types": "./esm/browser.d.ts",
-        "default": "./esm/browser.js"
+        "types": "./dist/browser.d.ts",
+        "default": "./dist/browser.js"
       },
       "require": {
         "types": "./lib/browser.d.cts",
@@ -57,6 +58,50 @@
         "default": "./lib/browser.cjs"
       }
     }
+  },
+  "scripts": {
+    "start": "vite",
+    "//build": "npm run build:lib && npm run build:docs && npm run build:demo",
+    "script": "node -r ts-node/register scripts/$SC.ts",
+    "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-esm && npm run build-esm:min",
+    "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
+    "build-esm:min": "esbuild ./src/*.ts --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
+    "build:lib": "tsc && tsc --project tsconfig.esm.json && npm run build:rewrite && npm run build:umd",
+    "build:umd": "SC=buildUMD npm run script",
+    "build:rewrite": "SC=rewriteBuilds npm run script",
+    "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\"",
+    "build:docs": "typedoc ./src/index.ts",
+    "test": "TS_NODE_PROJECT=test/tsconfig.json uvu -b -r ts-node/register test",
+    "toc": "markdown-toc --maxdepth 3 -i README.md",
+    "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
+    "postversion": "git push --follow-tags && npm publish",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@parcel/service-worker": "^2.9.3",
+    "@substrate-system/debug": "^0.7.2",
+    "@types/node": "^22.10.0",
+    "@types/pako": "*",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "auto-changelog": "^2.5.0",
+    "esbuild": "^0.24.0",
+    "jszip": "^3.5.0",
+    "markdown-toc": "^1.2.0",
+    "pako": "*",
+    "parcel": "^2.9.3",
+    "postcss-nesting": "^13.0.1",
+    "preact": "^10.17.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "simple-git": "^3.19.1",
+    "terser": "^5.3.8",
+    "tiny-inflate": "*",
+    "typedoc": "^0.27.0",
+    "typescript": "^5.7.2",
+    "uvu": "^0.3.3",
+    "uzip": "*",
+    "vite": "^6.0.1"
   },
   "targets": {
     "main": false,
@@ -90,40 +135,6 @@
     "unzip",
     "non-blocking"
   ],
-  "scripts": {
-    "build": "npm run build:lib && npm run build:docs && npm run build:demo",
-    "script": "node -r ts-node/register scripts/$SC.ts",
-    "build:lib": "tsc && tsc --project tsconfig.esm.json && npm run build:rewrite && npm run build:umd",
-    "build:umd": "SC=buildUMD npm run script",
-    "build:rewrite": "SC=rewriteBuilds npm run script",
-    "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\"",
-    "build:docs": "typedoc --plugin typedoc-plugin-markdown --hideBreadcrumbs --readme none --disableSources --excludePrivate --excludeProtected --githubPages false --out docs/ src/index.ts",
-    "test": "TS_NODE_PROJECT=test/tsconfig.json uvu -b -r ts-node/register test",
-    "postversion": "git push --follow-tags && npm publish",
-    "prepublishOnly": "npm run build"
-  },
-  "devDependencies": {
-    "@parcel/service-worker": "^2.9.3",
-    "@types/node": "^14.11.2",
-    "@types/pako": "*",
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "jszip": "^3.5.0",
-    "pako": "*",
-    "parcel": "^2.9.3",
-    "preact": "^10.17.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "simple-git": "^3.19.1",
-    "terser": "^5.3.8",
-    "tiny-inflate": "*",
-    "ts-node": "^10.9.1",
-    "typedoc": "^0.25.0",
-    "typedoc-plugin-markdown": "^3.16.0",
-    "typescript": "^5.2.2",
-    "uvu": "^0.3.3",
-    "uzip": "*"
-  },
   "license": "MIT",
   "alias": {
     "react": "preact/compat",

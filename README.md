@@ -1,6 +1,27 @@
 # fflate
 High performance (de)compression in an 8kB package
 
+<details><summary><h2>Contents</h2></summary>
+
+<!-- toc -->
+
+- [Why fflate?](#why-fflate)
+- [Types](#types)
+  * [AsyncZippable](#asynczippable)
+  * [AsyncZippableFile](#asynczippablefile)
+- [Demo](#demo)
+- [Usage](#usage)
+- [Bundle size estimates](#bundle-size-estimates)
+- [What makes `fflate` so fast?](#what-makes-fflate-so-fast)
+- [What about `CompressionStream`?](#what-about-compressionstream)
+- [Browser support](#browser-support)
+- [Testing](#testing)
+- [License](#license)
+
+<!-- tocstop -->
+
+</details>
+
 ## Why fflate?
 `fflate` (short for fast flate) is the **fastest, smallest, and most versatile** pure JavaScript compression and decompression library in existence, handily beating [`pako`](https://npmjs.com/package/pako), [`tiny-inflate`](https://npmjs.com/package/tiny-inflate), and [`UZIP.js`](https://github.com/photopea/UZIP.js) in performance benchmarks while being multiple times more lightweight. Its compression ratios are often better than even the original Zlib C library. It includes support for DEFLATE, GZIP, and Zlib data. Data compressed by `fflate` can be decompressed by other tools, and vice versa.
 
@@ -22,6 +43,39 @@ In addition to the base decompression and compression APIs, `fflate` supports hi
 | Multi-thread/Asynchronous   | ❌     | ❌                      | ❌                    | ✅                             |
 | Streaming ZIP support       | ❌     | ❌                      | ❌                    | ✅                             |
 | Uses ES Modules             | ❌     | ❌                      | ❌                    | ✅                             |
+
+## Types
+
+### AsyncZippable
+An object with paths pointing at arrays of files, e.g.
+
+```js
+const zippable = {
+  '/abc/def': [myUint8Array]
+}
+```
+
+```ts
+/**
+ * The complete directory structure of an asynchronously ZIPpable archive
+ */
+interface AsyncZippable {
+  [path:string]:AsyncZippableFile;
+}
+```
+
+### AsyncZippableFile
+
+```ts
+/**
+ * A file that can be used to asynchronously create a ZIP archive
+ */
+type AsyncZippableFile = Uint8Array |
+  AsyncZippable |
+  [Uint8Array | AsyncZippable, AsyncZipOptions]
+```
+
+-------------------------------------------------------------------------
 
 ## Demo
 If you'd like to try `fflate` for yourself without installing it, you can take a look at the [browser demo](https://101arrowz.github.io/fflate). Since `fflate` is a pure JavaScript library, it works in both the browser and Node.js (see [Browser support](https://github.com/101arrowz/fflate/#browser-support) for more info).

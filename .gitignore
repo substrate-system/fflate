@@ -10,4 +10,5 @@ rs/*/Cargo.lock
 umd/
 # for demo
 .parcel-cache
-dist/
+dist/docs
+docs
