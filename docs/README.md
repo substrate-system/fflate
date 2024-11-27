@@ -1,4 +1,4 @@
-# fflate
+# @substrate-system/fflate
 
 ## Table of contents
 
