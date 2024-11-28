@@ -46,7 +46,7 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
             if (err) throw err
             debug('the unzipped data...', data)
 
-            debug('unzipped is equal to zipped ???', equals(
+            debug('unzipped is equal to pre-zip ???', equals(
                 data['abc/test.txt'],
                 zippable['abc/test.txt'] as Uint8Array
             ))
