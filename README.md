@@ -16,20 +16,23 @@ High performance (de)compression in an 8kB package
 <!-- toc -->
 
 - [fork](#fork)
+- [Install](#install)
 - [Why fflate?](#why-fflate)
 - [Types](#types)
   * [AsyncZippable](#asynczippable)
   * [AsyncZippableFile](#asynczippablefile)
 - [Demo](#demo)
-- [Install](#install)
 - [Use](#use)
-- [Auto-detect file format](#auto-detect-file-format)
-- [String conversion API](#string-conversion-api)
-- [binary strings](#binary-strings)
-- [streams](#streams)
-- [Create multi-file zip archives](#create-multi-file-zip-archives)
-- [Customize](#customize)
+- [API](#api)
+  * [Auto-detect file format](#auto-detect-file-format)
+  * [String conversion API](#string-conversion-api)
+  * [binary strings](#binary-strings)
+  * [streams](#streams)
+  * [Create multi-file zip archives](#create-multi-file-zip-archives)
+  * [Customize](#customize)
 - [Async API](#async-api)
+  * [Parallel execution](#parallel-execution)
+- [docs](#docs)
 - [Bundle size estimates](#bundle-size-estimates)
 - [What makes `fflate` so fast?](#what-makes-fflate-so-fast)
 - [What about `CompressionStream`?](#what-about-compressionstream)
@@ -44,68 +47,7 @@ High performance (de)compression in an 8kB package
 ## fork
 This is a fork of [101arrowz/fflate](https://github.com/101arrowz/fflate).
 
-## Why fflate?
-`fflate` (short for fast flate) is the **fastest, smallest, and most versatile** pure JavaScript compression and decompression library in existence, handily beating [`pako`](https://npmjs.com/package/pako), [`tiny-inflate`](https://npmjs.com/package/tiny-inflate), and [`UZIP.js`](https://github.com/photopea/UZIP.js) in performance benchmarks while being multiple times more lightweight. Its compression ratios are often better than even the original Zlib C library. It includes support for DEFLATE, GZIP, and Zlib data. Data compressed by `fflate` can be decompressed by other tools, and vice versa.
-
-In addition to the base decompression and compression APIs, `fflate` supports high-speed ZIP file archiving for an extra 3 kB. In fact, the compressor, in synchronous mode, compresses both more quickly and with a higher compression ratio than most compression software (even Info-ZIP, a C program), and in asynchronous mode it can utilize multiple threads to achieve over 3x the performance of virtually any other utility.
-
-|                             | `pako` | `tiny-inflate`         | `UZIP.js`             | `fflate`                       |
-|-----------------------------|--------|------------------------|-----------------------|--------------------------------|
-| Decompression performance   | 1x     | Up to 40% slower       | **Up to 40% faster**  | **Up to 40% faster**           |
-| Compression performance     | 1x     | N/A                    | Up to 25% faster      | **Up to 50% faster**           |
-| Base bundle size (minified) | 45.6kB | **3kB (inflate only)** | 14.2kB                | 8kB **(3kB for inflate only)** |
-| Decompression support       | ✅     | ✅                      | ✅                    | ✅                             |
-| Compression support         | ✅     | ❌                      | ✅                    | ✅                             |
-| ZIP support                 | ❌     | ❌                      | ✅                    | ✅                             |
-| Streaming support           | ✅     | ❌                      | ❌                    | ✅                             |
-| GZIP support                | ✅     | ❌                      | ❌                    | ✅                             |
-| Supports files up to 4GB    | ✅     | ❌                      | ❌                    | ✅                             |
-| Doesn't hang on error       | ✅     | ❌                      | ❌                    | ✅                             |
-| Dictionary support          | ✅     | ❌                      | ❌                    | ✅                             |
-| Multi-thread/Asynchronous   | ❌     | ❌                      | ❌                    | ✅                             |
-| Streaming ZIP support       | ❌     | ❌                      | ❌                    | ✅                             |
-| Uses ES Modules             | ❌     | ❌                      | ❌                    | ✅                             |
-
------------------------------------------------------------------
-
-
-
-## Types
-
-### AsyncZippable
-A flat object with paths pointing at files, e.g.
-
-```js
-const zippable = {
-  'abc/123/aaa.txt': anotherUint8Array,
-  'abc/def.txt': myUint8Array
-}
-```
-
-```ts
-/**
- * The complete directory structure of an asynchronously ZIPpable archive
- */
-interface AsyncZippable {
-  [path:string]:AsyncZippableFile;
-}
-```
-
-### AsyncZippableFile
-
-```ts
-/**
- * A file that can be used to asynchronously create a ZIP archive
- */
-type AsyncZippableFile = Uint8Array |
-  AsyncZippable |
-  [Uint8Array | AsyncZippable, AsyncZipOptions]
-```
-
--------------------------------------------------------------------------
-
-## Demo
-If you'd like to try `fflate` for yourself without installing it, you can take a look at the [browser demo](https://101arrowz.github.io/fflate). Since `fflate` is a pure JavaScript library, it works in both the browser and Node.js (see [Browser support](https://github.com/101arrowz/fflate/#browser-support) for more info).
+----------------------------------------------------------------------------
 
 ## Install
 Install `fflate`:
@@ -165,6 +107,78 @@ If your environment doesn't support bundling:
 // Again, try to import just what you need
 ```
 
+
+## Why fflate?
+`fflate` (short for fast flate) is the **fastest, smallest, and most versatile** pure JavaScript compression and decompression library in existence, handily beating [`pako`](https://npmjs.com/package/pako), [`tiny-inflate`](https://npmjs.com/package/tiny-inflate), and [`UZIP.js`](https://github.com/photopea/UZIP.js) in performance benchmarks while being multiple times more lightweight. Its compression ratios are often better than even the original Zlib C library. It includes support for DEFLATE, GZIP, and Zlib data. Data compressed by `fflate` can be decompressed by other tools, and vice versa.
+
+In addition to the base decompression and compression APIs, `fflate` supports high-speed ZIP file archiving for an extra 3 kB. In fact, the compressor, in synchronous mode, compresses both more quickly and with a higher compression ratio than most compression software (even Info-ZIP, a C program), and in asynchronous mode it can utilize multiple threads to achieve over 3x the performance of virtually any other utility.
+
+|                             | `pako` | `tiny-inflate`         | `UZIP.js`             | `fflate`                       |
+|-----------------------------|--------|------------------------|-----------------------|--------------------------------|
+| Decompression performance   | 1x     | Up to 40% slower       | **Up to 40% faster**  | **Up to 40% faster**           |
+| Compression performance     | 1x     | N/A                    | Up to 25% faster      | **Up to 50% faster**           |
+| Base bundle size (minified) | 45.6kB | **3kB (inflate only)** | 14.2kB                | 8kB **(3kB for inflate only)** |
+| Decompression support       | ✅     | ✅                      | ✅                    | ✅                             |
+| Compression support         | ✅     | ❌                      | ✅                    | ✅                             |
+| ZIP support                 | ❌     | ❌                      | ✅                    | ✅                             |
+| Streaming support           | ✅     | ❌                      | ❌                    | ✅                             |
+| GZIP support                | ✅     | ❌                      | ❌                    | ✅                             |
+| Supports files up to 4GB    | ✅     | ❌                      | ❌                    | ✅                             |
+| Doesn't hang on error       | ✅     | ❌                      | ❌                    | ✅                             |
+| Dictionary support          | ✅     | ❌                      | ❌                    | ✅                             |
+| Multi-thread/Asynchronous   | ❌     | ❌                      | ❌                    | ✅                             |
+| Streaming ZIP support       | ❌     | ❌                      | ❌                    | ✅                             |
+| Uses ES Modules             | ❌     | ❌                      | ❌                    | ✅                             |
+
+
+
+-----------------------------------------------------------------
+
+
+
+## Types
+
+### AsyncZippable
+A flat object with paths pointing at files, e.g.
+
+```js
+const zippable = {
+  'abc/123/aaa.txt': anotherUint8Array,
+  'abc/def.txt': myUint8Array
+}
+```
+
+```ts
+/**
+ * The complete directory structure of an asynchronously ZIPpable archive
+ */
+interface AsyncZippable {
+  [path:string]:AsyncZippableFile;
+}
+```
+
+### AsyncZippableFile
+
+```ts
+/**
+ * A file that can be used to asynchronously create a ZIP archive
+ */
+type AsyncZippableFile = Uint8Array |
+  AsyncZippable |
+  [Uint8Array | AsyncZippable, AsyncZipOptions]
+```
+
+
+-------------------------------------------------------------------------
+
+
+## Demo
+If you'd like to try `fflate` for yourself without installing it, you can take a look at the [browser demo](https://101arrowz.github.io/fflate). Since `fflate` is a pure JavaScript library, it works in both the browser and Node.js (see [Browser support](https://github.com/101arrowz/fflate/#browser-support) for more info).
+
+
+-------------------------------------------------------------------------
+
+
 ## Use
 
 ```js
@@ -191,7 +205,13 @@ const gzipped = fflate.gzipSync(massiveFile, {
 });
 ```
 
-## Auto-detect file format
+
+-------------------------------------------------------------------------
+
+
+## API
+
+### Auto-detect file format
 
 `fflate` can autodetect a compressed file's format as well:
 
@@ -205,7 +225,7 @@ const compressed = new Uint8Array(
 const decompressed = fflate.decompressSync(compressed);
 ```
 
-## String conversion API
+### String conversion API
 Using strings is easy with `fflate`'s string conversion API:
 
 ```js
@@ -222,7 +242,7 @@ const origText = fflate.strFromU8(decompressed);
 console.log(origText); // Hello world!
 ```
 
-## binary strings
+### binary strings
 
 If you need to use an (albeit inefficient) binary string, you can set the second argument to `true`.
 ```js
@@ -244,7 +264,7 @@ const origText = fflate.strFromU8(decompressed);
 console.log(origText); // Hello world!
 ```
 
-## streams
+### streams
 
 You can use streams as well to incrementally add data to be compressed or decompressed:
 ```js
@@ -319,7 +339,7 @@ dcmpStrm.push(zlibJSONData2, true);
 console.log(JSON.parse(stringData));
 ```
 
-## Create multi-file zip archives
+### Create multi-file zip archives
 
 You can create multi-file ZIP archives easily as well. Note that by default, compression is enabled for all files, which is not useful when ZIPping many PNGs, JPEGs, PDFs, etc. because those formats are already compressed. You should either override the level on a per-file basis or globally to avoid wasting resources.
 
@@ -391,8 +411,10 @@ const decompressed = fflate.unzipSync(zipped, {
 });
 ```
 
-## Customize
+### Customize
+
 If you need extremely high performance or custom ZIP compression formats, you can use the highly-extensible ZIP streams. They take streams as both input and output. You can even use custom compression/decompression algorithms from other libraries, as long as they [are defined in the ZIP spec](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (see section 4.4.5). If you'd like more info on using custom compressors, [feel free to ask](https://github.com/101arrowz/fflate/discussions).
+
 ```js
 // ZIP object
 // Can also specify zip.ondata outside of the constructor
@@ -466,10 +488,16 @@ unzipper.push(zipChunk2);
 unzipper.push(zipChunk3, true);
 ```
 
+
+---------------------------------------------------------------------
+
+
 ## Async API
+
 As you may have guessed, there is an asynchronous version of every method as well. Unlike most libraries, this will cause the compression or decompression run in a separate thread entirely and automatically by using Web (or Node) Workers. This means that the processing will not block the main thread at all. 
 
 Note that there is a significant initial overhead to using workers of about 50ms for each asynchronous function. For instance, if you call `unzip` ten times, the overhead only applies for the first call, but if you call `unzip` and `zlib`, they will each cause the 50ms delay. For small (under about 50kB) payloads, the asynchronous APIs will be much slower. However, if you're compressing larger files/multiple files at once, or if the synchronous API causes the main thread to hang for too long, the callback APIs are an order of magnitude better.
+
 ```js
 import {
   gzip, zlib, AsyncGzip, zip, unzip, strFromU8,
@@ -533,11 +561,16 @@ console.log(wasCallbackCalled) // false
 // To terminate an asynchronous stream's internal worker, call
 // stream.terminate().
 gzs.terminate();
+```
 
-// This is way faster than zipSync because the compression of multiple
-// files runs in parallel. In fact, the fact that it's parallelized
-// makes it faster than most standalone ZIP CLIs. The effect is most
-// significant for multiple large files; less so for many small ones.
+### Parallel execution
+
+This is way faster than zipSync because the compression of multiple
+files runs in parallel. In fact, the fact that it's parallelized
+makes it faster than most standalone ZIP CLIs. The effect is most
+significant for multiple large files; less so for many small ones.
+
+```js
 zip({ f1: aMassiveFile, 'f2.txt': anotherMassiveFile }, {
   // The options object is still optional, you can still do just
   // zip(archive, callback)
@@ -589,7 +622,15 @@ unzip.register(AsyncUnzipInflate);
 unzip.push(data, true);
 ```
 
+-----------------------------------------------------------------------
+
+## docs
+
 See the [documentation](https://github.com/101arrowz/fflate/blob/master/docs/README.md) for more detailed information about the API.
+
+
+-----------------------------------------------------------------------
+
 
 ## Bundle size estimates
 
@@ -610,6 +651,10 @@ The maximum bundle size that is possible with `fflate` is about 31kB (11.5kB gzi
 | Streaming decompression | 4kB (1kB + raw decompression)  | `pako`, 11.4x larger    |
 | Streaming compression   | 5kB (1kB + raw compression)    | `pako`, 9.12x larger    |
 
+
+----------------------------------------------------------------
+
+
 ## What makes `fflate` so fast?
 Many JavaScript compression/decompression libraries exist. However, the most popular one, [`pako`](https://npmjs.com/package/pako), is merely a clone of Zlib rewritten nearly line-for-line in JavaScript. Although it is by no means poorly made, `pako` doesn't recognize the many differences between JavaScript and C, and therefore is suboptimal for performance. Moreover, even when minified, the library is 45 kB; it may not seem like much, but for anyone concerned with optimizing bundle size (especially library authors), it's more weight than necessary.
 
@@ -621,12 +666,18 @@ So what makes `fflate` different? It takes the brilliant innovations of `UZIP.js
 
 Before you decide that `fflate` is the end-all compression library, you should note that JavaScript simply cannot rival the performance of a native program. If you're only using Node.js, it's probably better to use the [native Zlib bindings](https://nodejs.org/api/zlib.html), which tend to offer the best performance. Though note that even against Zlib, `fflate` is only around 30% slower in decompression and 10% slower in compression, and can still achieve better compression ratios!
 
+-------------------------------------------------------------------
+
 ## What about `CompressionStream`?
 Like `fflate`, the [Compression Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Compression_Streams_API) provides DEFLATE, GZIP, and Zlib compression and decompression support. It's a good option if you'd like to compress or decompress data without installing any third-party libraries, and it wraps native Zlib bindings to achieve better performance than what most JavaScript programs can achieve.
 
 However, browsers do not offer any native non-streaming compression API, and `CompressionStream` has surprisingly poor performance on data already loaded into memory; `fflate` tends to be faster even for files that are dozens of megabytes large. Similarly, `fflate` is much faster for files under a megabyte because it avoids marshalling overheads. Even when streaming hundreds of megabytes of data, the native API usually performs between 30% faster and 10% slower than `fflate`. And Compression Streams have many other disadvantages - no ability to control compression level, poor support for older browsers, no ZIP support, etc.
 
 If you'd still prefer to depend upon a native browser API but want to support older browsers, you can use an `fflate`-based [Compression Streams ponyfill](https://github.com/101arrowz/compression-streams-polyfill).
+
+
+-------------------------------------------------------------------
+
 
 ## Browser support
 `fflate` makes heavy use of typed arrays (`Uint8Array`, `Uint16Array`, etc.). Typed arrays can be polyfilled at the cost of performance, but the most recent browser that doesn't support them [is from 2011](https://caniuse.com/typedarrays), so I wouldn't bother.
@@ -635,10 +686,18 @@ The asynchronous APIs also use `Worker`, which is not supported in a few browser
 
 Other than that, `fflate` is completely ES3, meaning you probably won't even need a bundler to use it.
 
+
+-------------------------------------------------------------------
+
+
 ## Testing
 You can validate the performance of `fflate` with `npm test`. It validates that the module is working as expected, ensures the outputs are no more than 5% larger than competitors at max compression, and outputs performance metrics to `test/results`.
 
 Note that the time it takes for the CLI to show the completion of each test is not representative of the time each package took, so please check the JSON output if you want accurate measurements.
+
+
+----------------------------------------------------------------------
+
 
 ## License
 
