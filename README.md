@@ -17,22 +17,23 @@ High performance (de)compression in an 8kB package
 
 - [fork](#fork)
 - [Install](#install)
+- [docs](#docs)
+- [Use](#use)
 - [Why fflate?](#why-fflate)
 - [Types](#types)
   * [AsyncZippable](#asynczippable)
   * [AsyncZippableFile](#asynczippablefile)
 - [Demo](#demo)
-- [Use](#use)
-- [API](#api)
+- [Examples](#examples)
+  * [level](#level)
   * [Auto-detect file format](#auto-detect-file-format)
   * [String conversion API](#string-conversion-api)
   * [binary strings](#binary-strings)
   * [streams](#streams)
   * [Create multi-file zip archives](#create-multi-file-zip-archives)
   * [Customize](#customize)
-- [Async API](#async-api)
+  * [Async API](#async-api)
   * [Parallel execution](#parallel-execution)
-- [docs](#docs)
 - [Bundle size estimates](#bundle-size-estimates)
 - [What makes `fflate` so fast?](#what-makes-fflate-so-fast)
 - [What about `CompressionStream`?](#what-about-compressionstream)
@@ -55,6 +56,20 @@ Install `fflate`:
 ```sh
 npm i -S @substrate-system/fflate  # or yarn add fflate, or pnpm add fflate
 ```
+
+
+-----------------------------------------------------------------------
+
+
+## docs
+
+See the [documentation](https://github.com/101arrowz/fflate/blob/master/docs/README.md) for more detailed information about the API.
+
+
+-----------------------------------------------------------------------
+
+
+## Use
 
 Import:
 ```js
@@ -106,6 +121,10 @@ If your environment doesn't support bundling:
 ```js
 // Again, try to import just what you need
 ```
+
+
+--------------------------------------------------------------
+
 
 
 ## Why fflate?
@@ -179,21 +198,27 @@ If you'd like to try `fflate` for yourself without installing it, you can take a
 -------------------------------------------------------------------------
 
 
-## Use
+## Examples
+
+### level
+
+Pass in an argument `level`.  Higher level means lower performance but better
+compression. The level ranges from 0 (no compression) to 9 (max compression).
+The default 6.
 
 ```js
 // This is an ArrayBuffer of data
 const massiveFileBuf = await fetch('/aMassiveFile').then(
   res => res.arrayBuffer()
 );
+
 // To use fflate, you need a Uint8Array
 const massiveFile = new Uint8Array(massiveFileBuf);
+
 // Note that Node.js Buffers work just fine as well:
 // const massiveFile = require('fs').readFileSync('aMassiveFile.txt');
 
-// Higher level means lower performance but better compression
-// The level ranges from 0 (no compression) to 9 (max compression)
-// The default level is 6
+// Set the level
 const notSoMassive = fflate.zlibSync(massiveFile, { level: 9 });
 const massiveAgain = fflate.unzlibSync(notSoMassive);
 const gzipped = fflate.gzipSync(massiveFile, {
@@ -205,11 +230,6 @@ const gzipped = fflate.gzipSync(massiveFile, {
 });
 ```
 
-
--------------------------------------------------------------------------
-
-
-## API
 
 ### Auto-detect file format
 
@@ -492,7 +512,7 @@ unzipper.push(zipChunk3, true);
 ---------------------------------------------------------------------
 
 
-## Async API
+### Async API
 
 As you may have guessed, there is an asynchronous version of every method as well. Unlike most libraries, this will cause the compression or decompression run in a separate thread entirely and automatically by using Web (or Node) Workers. This means that the processing will not block the main thread at all. 
 
@@ -621,13 +641,6 @@ const unzip = new Unzip(stream => {
 unzip.register(AsyncUnzipInflate);
 unzip.push(data, true);
 ```
-
------------------------------------------------------------------------
-
-## docs
-
-See the [documentation](https://github.com/101arrowz/fflate/blob/master/docs/README.md) for more detailed information about the API.
-
 
 -----------------------------------------------------------------------
 

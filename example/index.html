@@ -6,11 +6,19 @@
     <link rel="stylesheet" href="/style.css">
     <title>Example</title>
 </head>
+
 <body>
     <div id="root">
+      <p>
+        Open the browser console, then pick a directory and see the log.
+      </p>
+
       <form class="example">
-        <input name="file" id="file" type="file" webkitdirectory directory>
-        <button type="submit">Submit</button>
+        <label for="dir" class="custom-file-upload">
+          Choose a directory
+        </label>
+        <input name="dir" id="dir" type="file" webkitdirectory directory>
+        <button disabled type="submit">Submit</button>
       </form>
     </div>
 

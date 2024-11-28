@@ -3302,13 +3302,13 @@ export function zip (
 }
 
 /**
- * Flatten directory structure. Return an object of files where the keys
+ * Flatten directory structure. Return a flat object of files where the keys
  * are the folder path.
  * 
  * @example
  * ```js
  * {
- *   'name/hello': 
+ *   'name/hello': file_Uint8Array
  * }
  * ```
  */
