@@ -8,7 +8,9 @@
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
 
 
-High performance (de)compression in an 8kB package
+High performance (de)compression in an 8kB package.
+
+See [the example page](https://substrate-system.github.io/fflate/).
 
 
 <details><summary><h2>Contents</h2></summary>
@@ -51,10 +53,9 @@ This is a fork of [101arrowz/fflate](https://github.com/101arrowz/fflate).
 ----------------------------------------------------------------------------
 
 ## Install
-Install `fflate`:
 
 ```sh
-npm i -S @substrate-system/fflate  # or yarn add fflate, or pnpm add fflate
+npm i -S @substrate-system/fflate
 ```
 
 
