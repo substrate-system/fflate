@@ -1,6 +1,6 @@
 {
   "name": "@substrate-system/fflate",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "type": "module",
   "description": "High performance (de)compression in an 8kB package",
   "module": "./dist/browser.js",
