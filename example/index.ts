@@ -26,6 +26,8 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
     
     const zippable = await createZippable(files)
 
+    debug('zippable', zippable)
+
     const preZipSize = Object.keys(zippable).reduce((total, key) => {
         return total + (zippable[key] as Uint8Array).length
     }, 0)

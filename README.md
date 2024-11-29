@@ -201,6 +201,37 @@ If you'd like to try `fflate` for yourself without installing it, you can take a
 
 ## Examples
 
+### `createZippable`
+Create a flat object mapping paths to files.
+
+```ts
+import { zip, createZippable } from '@substrate-system/fflate'
+
+document.querySelector('form').addEventListener('submit', ev => {
+  ev.preventDefault()
+  const form = (ev.target as HTMLFormElement)
+  const files = (form.elements['dir'] as HTMLInputElement).files!
+  
+  const zippable = await createZippable(files)
+
+  // =>
+  // {
+  //   "abc/.DS_Store": Uint8Array,
+  //   "abc/test2.txt": Uint8Array,
+  //   "abc/test.txt": Uint8Array,
+  //   "abc/aaaaa/.DS_Store": Uint8Array,
+  //   "abc/aaaaa/bbb/testbbb.txt": Uint8Array
+  // }
+
+  zip(zippable, {
+      level: 6
+  }, (err, data) => {
+      if (err) throw err
+      debug('size, after zipping...', data.length)
+  })
+})
+```
+
 ### level
 
 Pass in an argument `level`.  Higher level means lower performance but better
