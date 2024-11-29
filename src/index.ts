@@ -58,8 +58,11 @@ const freb = (eb: Uint8Array, start: number) => {
 }
 
 const { b: fl, r: revfl } = freb(fleb, 2)
+
 // we can ignore the fact that the other numbers are wrong; they never happen anyway
-fl[28] = 258, revfl[258] = 28
+fl[28] = 258
+revfl[258] = 28
+
 const { b: fd, r: revfd } = freb(fdeb, 0)
 
 // map of value to reverse (assuming 16 bits)
@@ -218,7 +221,7 @@ const ec = [
     'invalid length/literal',
     'invalid distance',
     'stream finished',
-    'no stream handler',,   // determined by compression function
+    'no stream handler',   // determined by compression function
     'no callback',
     'invalid UTF-8 data',
     'extra field too long',
