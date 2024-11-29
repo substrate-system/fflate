@@ -17,6 +17,7 @@
   },
   "scripts": {
     "start": "vite",
+    "lint": "eslint \"./**/*.{ts,js}\"",
     "script": "node -r ts-node/register scripts/$SC.ts",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-esm && npm run build-esm:min && npm run build-cjs && npm run build-cjs:min",
     "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
@@ -32,7 +33,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@parcel/service-worker": "^2.9.3",
     "@substrate-system/debug": "^0.7.2",
     "@substrate-system/util": "^0.1.15",
     "@types/node": "^22.10.0",
@@ -44,7 +44,6 @@
     "jszip": "^3.5.0",
     "markdown-toc": "^1.2.0",
     "pako": "*",
-    "parcel": "^2.9.3",
     "postcss-nesting": "^13.0.1",
     "preact": "^10.17.1",
     "react": "^18.2.0",
