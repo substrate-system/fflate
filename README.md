@@ -27,6 +27,7 @@ See [the example page](https://substrate-system.github.io/fflate/).
   * [AsyncZippableFile](#asynczippablefile)
 - [Demo](#demo)
 - [Examples](#examples)
+  * [`createZippable`](#createzippable)
   * [level](#level)
   * [Auto-detect file format](#auto-detect-file-format)
   * [String conversion API](#string-conversion-api)
