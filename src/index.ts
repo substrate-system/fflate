@@ -245,36 +245,42 @@ export interface FlateError extends Error {
 const err = (ind: number, msg?: string | 0, nt?: 1) => {
     const e: Partial<FlateError> = new Error(msg || ec[ind])
     e.code = ind
-    if (Error.captureStackTrace) Error.captureStackTrace(e, err)
     if (!nt) throw e
     return e as FlateError
 }
 
 // expands raw DEFLATE data
-const inflt = (dat: Uint8Array, st: InflateState, buf?: Uint8Array, dict?: Uint8Array) => {
+const inflt = (dat:Uint8Array, st:InflateState, buf?:Uint8Array, dict?:Uint8Array) => {
     // source length       dict length
     const sl = dat.length; const dl = dict ? dict.length : 0
-    if (!sl || st.f && !st.l) return buf || new U8(0)
+    if (!sl || (st.f && !st.l)) return buf || new U8(0)
     const noBuf = !buf
     // have to estimate size
-    const resize = noBuf || st.i != 2
+    const resize = noBuf || st.i !== 2
     // no state
     const noSt = st.i
     // Assumes roughly 33% compression ratio average
     if (noBuf) buf = new U8(sl * 3)
     // ensure buffer can fit at least l elements
     const cbuf = (l: number) => {
-        const bl = buf.length
+        const bl = buf!.length
         // need to increase size to fit
         if (l > bl) {
             // Double or set to necessary, whichever is greater
             const nbuf = new U8(Math.max(bl * 2, l))
-            nbuf.set(buf)
+            nbuf.set(buf!)
             buf = nbuf
         }
     }
     //  last chunk         bitpos           bytes
-    let final = st.f || 0; let pos = st.p || 0; let bt = st.b || 0; let lm = st.l; let dm = st.d; let lbt = st.m; let dbt = st.n
+    let final = st.f || 0
+    let pos = st.p || 0
+    let bt = st.b || 0
+    let lm:Uint16Array|undefined|null = st.l
+    let dm = st.d
+    let lbt = st.m
+    let dbt = st.n
+
     // total bits
     const tbts = sl * 8
     do {
@@ -294,12 +300,18 @@ const inflt = (dat: Uint8Array, st: InflateState, buf?: Uint8Array, dict?: Uint8
                 // ensure size
                 if (resize) cbuf(bt + l)
                 // Copy over uncompressed data
-                buf.set(dat.subarray(s, t), bt)
+                buf!.set(dat.subarray(s, t), bt)
                 // Get new bitpos, update byte count
-                st.b = bt += l, st.p = pos = t * 8, st.f = final
+                st.b = bt += l
+                st.p = pos = t * 8
+                st.f = final
                 continue
-            } else if (type === 1) lm = flrm, dm = fdrm, lbt = 9, dbt = 5
-            else if (type === 2) {
+            } else if (type === 1) {
+                lm = flrm
+                dm = fdrm
+                lbt = 9
+                dbt = 5
+            } else if (type === 2) {
                 //  literal                            lengths
                 const hLit = bits(dat, pos, 31) + 257; const hcLen = bits(dat, pos + 10, 15) + 4
                 const tl = hLit + bits(dat, pos + 5, 31) + 1
@@ -329,10 +341,21 @@ const inflt = (dat: Uint8Array, st: InflateState, buf?: Uint8Array, dict?: Uint8
                     } else {
                         //  copy   count
                         let c = 0; let n = 0
-                        if (s === 16) n = 3 + bits(dat, pos, 3), pos += 2, c = ldt[i - 1]
-                        else if (s === 17) n = 3 + bits(dat, pos, 7), pos += 3
-                        else if (s === 18) n = 11 + bits(dat, pos, 127), pos += 7
-                        while (n--) ldt[i++] = c
+                        if (s === 16) {
+                            n = 3 + bits(dat, pos, 3)
+                            pos += 2
+                            c = ldt[i - 1]
+                        } else if (s === 17) {
+                            n = 3 + bits(dat, pos, 7)
+                            pos += 3
+                        } else if (s === 18) {
+                            n = 11 + bits(dat, pos, 127)
+                            pos += 7
+                        }
+
+                        while (n--) {
+                            ldt[i++] = c
+                        }
                     }
                 }
                 //    length tree                 distance tree
@@ -349,23 +372,26 @@ const inflt = (dat: Uint8Array, st: InflateState, buf?: Uint8Array, dict?: Uint8
                 break
             }
         }
+
         // Make sure the buffer can hold this + the largest possible addition
         // Maximum chunk size (practically, theoretically infinite) is 2^17
         if (resize) cbuf(bt + 131072)
-        const lms = (1 << lbt) - 1; const dms = (1 << dbt) - 1
+
+        const lms = (1 << lbt!) - 1; const dms = (1 << dbt!) - 1
         let lpos = pos
         for (;; lpos = pos) {
             // bits read, code
-            const c = lm[bits16(dat, pos) & lms]; const sym = c >> 4
+            const c = lm![bits16(dat, pos) & lms]; const sym = c >> 4
             pos += c & 15
             if (pos > tbts) {
                 if (noSt) err(0)
                 break
             }
             if (!c) err(2)
-            if (sym < 256) buf[bt++] = sym
+            if (sym < 256) buf![bt++] = sym
             else if (sym === 256) {
-                lpos = pos, lm = null
+                lpos = pos
+                lm = null
                 break
             } else {
                 let add = sym - 254
@@ -399,7 +425,10 @@ const inflt = (dat: Uint8Array, st: InflateState, buf?: Uint8Array, dict?: Uint8
                 for (; bt < end; ++bt) buf[bt] = buf[bt - dt]
             }
         }
-        st.l = lm, st.p = lpos, st.b = bt, st.f = final
+        st.l = lm
+        st.p = lpos
+        st.b = bt
+        st.f = final
         if (lm) final = 1, st.m = lbt, st.d = dm, st.n = dbt
     } while (!final)
     // don't reallocate for streams or user buffers
