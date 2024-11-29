@@ -22,7 +22,7 @@ document.querySelector('form.example')?.addEventListener('submit', async ev => {
     ev.preventDefault()
     debug('submit', ev)
     const form = (ev.target as HTMLFormElement)
-    const files = (form.elements.dir as HTMLInputElement).files!
+    const files = (form.elements['dir'] as HTMLInputElement).files!
 
     const zippable = await createZippable(files)
 

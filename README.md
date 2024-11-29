@@ -28,7 +28,8 @@ See [the example page](https://substrate-system.github.io/fflate/).
 - [Demo](#demo)
 - [Examples](#examples)
   * [`createZippable`](#createzippable)
-  * [level](#level)
+  * [Parallel execution](#parallel-execution)
+  * [`level` argument](#level-argument)
   * [Auto-detect file format](#auto-detect-file-format)
   * [String conversion API](#string-conversion-api)
   * [binary strings](#binary-strings)
@@ -36,7 +37,6 @@ See [the example page](https://substrate-system.github.io/fflate/).
   * [Create multi-file zip archives](#create-multi-file-zip-archives)
   * [Customize](#customize)
   * [Async API](#async-api)
-  * [Parallel execution](#parallel-execution)
 - [Bundle size estimates](#bundle-size-estimates)
 - [What makes `fflate` so fast?](#what-makes-fflate-so-fast)
 - [What about `CompressionStream`?](#what-about-compressionstream)
@@ -233,7 +233,70 @@ document.querySelector('form').addEventListener('submit', ev => {
 })
 ```
 
-### level
+---------------------------------------------------------------------------
+
+### Parallel execution
+
+This is faster than zipSync because the compression of multiple
+files runs in parallel. In fact, the fact that it's parallelized
+makes it faster than most standalone ZIP CLIs. The effect is most
+significant for multiple large files; less so for many small ones.
+
+```js
+zip({ f1: aMassiveFile, 'f2.txt': anotherMassiveFile }, {
+  // The options object is still optional, you can still do just
+  // zip(archive, callback)
+  level: 6
+}, (err, data) => {
+  // Save the ZIP file
+});
+
+// unzip is the only async function without support for consume option
+// It is parallelized, so unzip is also often much faster than unzipSync
+unzip(aMassiveZIPFile, (err, unzipped) => {
+  // If the archive has data.xml, log it here
+  console.log(unzipped['data.xml']);
+  // Conversion to string
+  console.log(strFromU8(unzipped['data.xml']))
+});
+
+// Streaming ZIP archives can accept asynchronous streams. This automatically
+// uses multicore compression.
+const zip = new Zip();
+zip.ondata = (err, chunk, final) => { ... };
+// The JSON and BMP are compressed in parallel
+const exampleFile = new AsyncZipDeflate('example.json');
+zip.add(exampleFile);
+exampleFile.push(JSON.stringify({ large: 'object' }), true);
+const exampleFile2 = new AsyncZipDeflate('example2.bmp', { level: 9 });
+zip.add(exampleFile2);
+exampleFile2.push(ec2a);
+exampleFile2.push(ec2b);
+exampleFile2.push(ec2c);
+...
+exampleFile2.push(ec2Final, true);
+zip.end();
+
+// Streaming Unzip should register the asynchronous inflation algorithm
+// for parallel processing.
+const unzip = new Unzip(stream => {
+  if (stream.name.endsWith('.json')) {
+    stream.ondata = (err, chunk, final) => { ... };
+    stream.start();
+
+    if (needToCancel) {
+      // To cancel these streams, call .terminate()
+      stream.terminate();
+    }
+  }
+});
+unzip.register(AsyncUnzipInflate);
+unzip.push(data, true);
+```
+
+---------------------------------------------------------------------------
+
+### `level` argument
 
 Pass in an argument `level`.  Higher level means lower performance but better
 compression. The level ranges from 0 (no compression) to 9 (max compression).
@@ -614,65 +677,6 @@ console.log(wasCallbackCalled) // false
 // To terminate an asynchronous stream's internal worker, call
 // stream.terminate().
 gzs.terminate();
-```
-
-### Parallel execution
-
-This is way faster than zipSync because the compression of multiple
-files runs in parallel. In fact, the fact that it's parallelized
-makes it faster than most standalone ZIP CLIs. The effect is most
-significant for multiple large files; less so for many small ones.
-
-```js
-zip({ f1: aMassiveFile, 'f2.txt': anotherMassiveFile }, {
-  // The options object is still optional, you can still do just
-  // zip(archive, callback)
-  level: 6
-}, (err, data) => {
-  // Save the ZIP file
-});
-
-// unzip is the only async function without support for consume option
-// It is parallelized, so unzip is also often much faster than unzipSync
-unzip(aMassiveZIPFile, (err, unzipped) => {
-  // If the archive has data.xml, log it here
-  console.log(unzipped['data.xml']);
-  // Conversion to string
-  console.log(strFromU8(unzipped['data.xml']))
-});
-
-// Streaming ZIP archives can accept asynchronous streams. This automatically
-// uses multicore compression.
-const zip = new Zip();
-zip.ondata = (err, chunk, final) => { ... };
-// The JSON and BMP are compressed in parallel
-const exampleFile = new AsyncZipDeflate('example.json');
-zip.add(exampleFile);
-exampleFile.push(JSON.stringify({ large: 'object' }), true);
-const exampleFile2 = new AsyncZipDeflate('example2.bmp', { level: 9 });
-zip.add(exampleFile2);
-exampleFile2.push(ec2a);
-exampleFile2.push(ec2b);
-exampleFile2.push(ec2c);
-...
-exampleFile2.push(ec2Final, true);
-zip.end();
-
-// Streaming Unzip should register the asynchronous inflation algorithm
-// for parallel processing.
-const unzip = new Unzip(stream => {
-  if (stream.name.endsWith('.json')) {
-    stream.ondata = (err, chunk, final) => { ... };
-    stream.start();
-
-    if (needToCancel) {
-      // To cancel these streams, call .terminate()
-      stream.terminate();
-    }
-  }
-});
-unzip.register(AsyncUnzipInflate);
-unzip.push(data, true);
 ```
 
 -----------------------------------------------------------------------

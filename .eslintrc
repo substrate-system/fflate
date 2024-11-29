@@ -12,6 +12,7 @@
     "@typescript-eslint"
   ],
   "rules": {
+    "dot-notation": "off",
     "@typescript-eslint/no-unused-expressions": "off",
     "new-cap": "off",
     "no-use-before-define": "off",
