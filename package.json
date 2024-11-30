@@ -36,6 +36,7 @@
     "build:docs": "typedoc ./src/index.ts",
     "build-example": "mkdir -p ./public && rm -rf ./public/* && VITE_DEBUG_MODE=staging vite --mode staging --base=\"/fflate\" build",
     "toc": "markdown-toc --maxdepth 3 -i README.md",
+    "//preversion": "npm run lint",
     "version": "npm run toc && git add README.md",
     "postversion": "git push --follow-tags && npm publish",
     "//prepublishOnly": "npm run build"
