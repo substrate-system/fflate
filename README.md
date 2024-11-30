@@ -243,6 +243,8 @@ makes it faster than most standalone ZIP CLIs. The effect is most
 significant for multiple large files; less so for many small ones.
 
 ```js
+import { zip } from '@substrate-system/fflate'
+
 zip({ f1: aMassiveFile, 'f2.txt': anotherMassiveFile }, {
   // The options object is still optional, you can still do just
   // zip(archive, callback)
