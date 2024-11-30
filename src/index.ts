@@ -1210,16 +1210,17 @@ const astrmify = <T>(fns: (() => unknown[])[], strm: Astrm, opts: T | 0, init: (
         id,
         (err, dat) => {
             if (err) w.terminate(), strm.ondata.call(strm, err)
-            else if (!Array.isArray(dat)) ext(dat)
+            else if (!Array.isArray(dat)) ext!(dat)
             else if (dat.length === 1) {
                 strm.queuedSize -= dat[0]
                 if (strm.ondrain) strm.ondrain(dat[0])
             } else {
                 if (dat[1]) w.terminate()
-                strm.ondata.call(strm, err, dat[0], dat[1])
+                strm.ondata(err, dat[0], dat[1])
             }
         }
     )
+
     w.postMessage(opts)
     strm.queuedSize = 0
     strm.push = (d, f) => {
@@ -1228,6 +1229,7 @@ const astrmify = <T>(fns: (() => unknown[])[], strm: Astrm, opts: T | 0, init: (
         strm.queuedSize += d.length
         w.postMessage([d, t = f], [d.buffer])
     }
+
     strm.terminate = () => { w.terminate() }
     if (flush) {
         strm.flush = () => { w.postMessage([]) }
