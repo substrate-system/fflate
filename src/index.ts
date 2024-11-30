@@ -3359,9 +3359,16 @@ export function zip (
  * }
  * ```
  */
-export async function createZippable (list:FileList):Promise<AsyncZippable> {
+export async function createZippable (list:FileList, opts:{
+    hiddenFiles:boolean
+} = { hiddenFiles: false }):Promise<AsyncZippable> {
+    const showDotFiles = opts?.hiddenFiles
     const zippable = await Array.from(list).reduce(async (_acc, file) => {
         const acc = await _acc
+        const isDotFile = file.webkitRelativePath.split('/').pop()?.startsWith('.')
+        if (isDotFile && !showDotFiles) {
+            return acc
+        }
         acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
 
         return acc
