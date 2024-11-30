@@ -3361,7 +3361,7 @@ export function zip (
  */
 export async function createZippable (list:FileList, opts:{
     hiddenFiles:boolean
-} = { hiddenFiles: false }):Promise<AsyncZippable> {
+} = { hiddenFiles: false }):Promise<Record<string, Uint8Array>> {
     const showDotFiles = opts?.hiddenFiles
     const zippable = await Array.from(list).reduce(async (_acc, file) => {
         const acc = await _acc
@@ -3372,7 +3372,7 @@ export async function createZippable (list:FileList, opts:{
         acc[file.webkitRelativePath] = new Uint8Array(await file.arrayBuffer())
 
         return acc
-    }, Promise.resolve({}) as Promise<Record<string, Uint8Array>>)
+    }, Promise.resolve({}))
 
     return zippable
 }
