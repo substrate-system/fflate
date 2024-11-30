@@ -12,7 +12,10 @@
     "@typescript-eslint"
   ],
   "rules": {
+    "eqeqeq": "off",
+    "no-sequences": "off",
     "dot-notation": "off",
+    "@typescript-eslint/no-empty-object-type": "off",
     "@typescript-eslint/no-unused-expressions": "off",
     "new-cap": "off",
     "no-use-before-define": "off",

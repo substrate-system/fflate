@@ -402,9 +402,14 @@ const inflt = (dat:Uint8Array, st:InflateState, buf?:Uint8Array, dict?:Uint8Arra
                     add = bits(dat, pos, (1 << b) - 1) + fl[i]
                     pos += b
                 }
+
                 // dist
-                const d = dm[bits16(dat, pos) & dms]; const dsym = d >> 4
+                if (!dm) break
+                const d = dm[bits16(dat, pos) & dms]
+                const dsym = d >> 4
+
                 if (!d) err(3)
+
                 pos += d & 15
                 let dt = fd[dsym]
                 if (dsym > 3) {
@@ -420,19 +425,20 @@ const inflt = (dat:Uint8Array, st:InflateState, buf?:Uint8Array, dict?:Uint8Arra
                 if (bt < dt) {
                     const shift = dl - dt; const dend = Math.min(dt, end)
                     if (shift + bt < 0) err(3)
-                    for (; bt < dend; ++bt) buf[bt] = dict[shift + bt]
+                    for (; bt < dend; ++bt) buf![bt] = dict![shift + bt]
                 }
-                for (; bt < end; ++bt) buf[bt] = buf[bt - dt]
+                for (; bt < end; ++bt) buf![bt] = buf![bt - dt]
             }
         }
-        st.l = lm
+
+        st.l = lm!
         st.p = lpos
         st.b = bt
         st.f = final
         if (lm) final = 1, st.m = lbt, st.d = dm, st.n = dbt
     } while (!final)
     // don't reallocate for streams or user buffers
-    return bt != buf.length && noBuf ? slc(buf, 0, bt) : buf.subarray(0, bt)
+    return bt != buf!.length && noBuf ? slc(buf!, 0, bt) : buf!.subarray(0, bt)
 }
 
 // starting at p, write the minimum number of bits that can hold v to d
@@ -484,22 +490,26 @@ const hTree = (d: Uint16Array, mb: number) => {
     t.push({ s: -1, f: 25001 })
     let l = t[0]; let r = t[1]; let i0 = 0; let i1 = 1; let i2 = 2
     t[0] = { s: -1, f: l.f + r.f, l, r }
+
     // efficient algorithm from UZIP.js
     // i0 is lookbehind, i2 is lookahead - after processing two low-freq
     // symbols that combined have high freq, will start processing i2 (high-freq,
     // non-composite) symbols instead
     // see https://reddit.com/r/photopea/comments/ikekht/uzipjs_questions/
-    while (i1 != s - 1) {
+    while (i1 !== s - 1) {
         l = t[t[i0].f < t[i2].f ? i0++ : i2++]
         r = t[i0 != i1 && t[i0].f < t[i2].f ? i0++ : i2++]
         t[i1++] = { s: -1, f: l.f + r.f, l, r }
     }
+
     let maxSym = t2[0].s
     for (let i = 1; i < s; ++i) {
         if (t2[i].s > maxSym) maxSym = t2[i].s
     }
+
     // code lengths
     const tr = new U16(maxSym + 1)
+
     // max bits in tree
     let mbt = ln(t[i1 - 1], tr, 0)
     if (mbt > mb) {
@@ -537,7 +547,7 @@ const hTree = (d: Uint16Array, mb: number) => {
 // get the max length and assign length codes
 const ln = (n: HuffNode, l: Uint16Array, d: number): number => {
     return n.s === -1
-        ? Math.max(ln(n.l, l, d + 1), ln(n.r, l, d + 1))
+        ? Math.max(ln(n.l!, l, d + 1), ln(n.r!, l, d + 1))
         : (l[n.s] = d)
 }
 
@@ -682,19 +692,24 @@ const dflt = (dat: Uint8Array, lvl: number, plvl: number, pre: number, post: num
     const lst = st.l
     let pos = (st.r || 0) & 7
     if (lvl) {
-        if (pos) w[0] = st.r >> 3
+        if (pos) w[0] = st.r! >> 3
+
         const opt = deo[lvl - 1]
         const n = opt >> 13; const c = opt & 8191
         const msk = (1 << plvl) - 1
+
         //    prev 2-byte val map    curr 2-byte val map
         const prev = st.p || new U16(32768); const head = st.h || new U16(msk + 1)
         const bs1 = Math.ceil(plvl / 3); const bs2 = 2 * bs1
         const hsh = (i: number) => (dat[i] ^ (dat[i + 1] << bs1) ^ (dat[i + 2] << bs2)) & msk
+
         // 24576 is an arbitrary number of maximum symbols per block
         // 424 buffer for last block
         const syms = new i32(25000)
+
         // length/literal freq   distance freq
         const lf = new U16(288); const df = new U16(32)
+
         //  l/lcnt  exbits  index          l/lind  waitdx          blkpos
         let lc = 0; let eb = 0; let i = st.i || 0; let li = 0; let wi = st.w || 0; let bs = 0
         for (; i + 2 < s; ++i) {
@@ -1111,6 +1126,7 @@ type CachedWorker = {
 };
 
 const ch: CachedWorker[] = []
+
 // clone bufs
 const cbfs = (v: Record<string, unknown>) => {
     const tl: ArrayBuffer[] = []
