@@ -1,4 +1,4 @@
-import { Zip, ZipPassThrough } from '../src/index.js'
+import { Zip, ZipPassThrough } from './index.js'
 
 const wrapError = err => {
     if (err instanceof Error) {
@@ -10,7 +10,7 @@ const wrapError = err => {
     }
 }
 
-export const makeZipStream = (files:File[]) => {
+export function makeZipStream (files:File[]) {
     const highWaterMark = 1_000_000
 
     const zip = new Zip()
