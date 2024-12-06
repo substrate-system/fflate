@@ -7,9 +7,11 @@
 
 // Some of the following code is similar to that of UZIP.js:
 // https://github.com/photopea/UZIP.js
-// However, the vast majority of the codebase has diverged from UZIP.js to increase performance and reduce bundle size.
+// However, the vast majority of the codebase has diverged from UZIP.js to
+//   increase performance and reduce bundle size.
 
-// Sometimes 0 will appear where -1 would be more appropriate. This is because using a uint
+// Sometimes 0 will appear where -1 would be more appropriate. This is because
+//   using a uint
 // is better for memory in most engines (I *think*).
 
 /**
@@ -18,7 +20,7 @@
 import wk from './node-worker'
 
 export interface AsyncZippable {
-  [path:string]:AsyncZippableFile;
+    [path:string]:AsyncZippableFile;
 }
 
 // aliases for shorter compressed code (most minifers don't do this)
@@ -684,7 +686,14 @@ type DeflateState = {
 };
 
 // compresses data into a raw DEFLATE buffer
-const dflt = (dat: Uint8Array, lvl: number, plvl: number, pre: number, post: number, st: DeflateState) => {
+const dflt = (
+    dat:Uint8Array,
+    lvl:number,
+    plvl:number,
+    pre:number,
+    post:number,
+    st:DeflateState
+) => {
     const s = st.z || dat.length
     const o = new U8(pre + s + 5 * (1 + Math.ceil(s / 7000)) + post)
     // writing to this writes to the output buffer
@@ -810,8 +819,8 @@ const dflt = (dat: Uint8Array, lvl: number, plvl: number, pre: number, post: num
 
 // crc check
 type CRCV = {
-  p(d: Uint8Array): void;
-  d(): number;
+    p(d:Uint8Array):void;
+    d():number;
 };
 
 // CRC32 table
@@ -826,13 +835,15 @@ const crct = /* #__PURE__ */ (() => {
 })()
 
 // CRC32
-const crc = (): CRCV => {
+const crc = ():CRCV => {
     let c = -1
     return {
         p (d) {
             // closures have awful performance
             let cr = c
-            for (let i = 0; i < d.length; ++i) cr = crct[(cr & 255) ^ d[i]] ^ (cr >>> 8)
+            for (let i = 0; i < d.length; ++i) {
+                cr = crct[(cr & 255) ^ d[i]] ^ (cr >>> 8)
+            }
             c = cr
         },
         d () { return ~c }
@@ -840,7 +851,7 @@ const crc = (): CRCV => {
 }
 
 // Adler32
-const adler = (): CRCV => {
+const adler = ():CRCV => {
     let a = 1; let b = 0
     return {
         p (d) {
@@ -1062,7 +1073,13 @@ export interface AsyncTerminable {
 }
 
 // deflate with opts
-const dopt = (dat: Uint8Array, opt: DeflateOptions, pre: number, post: number, st?: DeflateState) => {
+const dopt = (
+    dat:Uint8Array,
+    opt:DeflateOptions,
+    pre:number,
+    post:number,
+    st?:DeflateState
+) => {
     if (!st) {
         st = { l: 1 }
         if (opt.dictionary) {
@@ -1074,7 +1091,19 @@ const dopt = (dat: Uint8Array, opt: DeflateOptions, pre: number, post: number, s
             st.w = dict.length
         }
     }
-    return dflt(dat, opt.level == null ? 6 : opt.level, opt.mem == null ? (st.l ? Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) : 20) : (12 + opt.mem), pre, post, st)
+
+    const ifNull = (st.l ?
+        Math.ceil(Math.max(8, Math.min(13, Math.log(dat.length))) * 1.5) :
+        20)
+
+    return dflt(
+        dat,
+        (opt.level == null ? 6 : opt.level),
+        (opt.mem == null ? ifNull : (12 + opt.mem)),
+        pre,
+        post,
+        st
+    )
 }
 
 // Walmart object spread
@@ -1087,17 +1116,26 @@ const mrg = <A, B>(a: A, b: B) => {
 
 // worker clone
 
-// This is possibly the craziest part of the entire codebase, despite how simple it may seem.
-// The only parameter to this function is a closure that returns an array of variables outside of the function scope.
-// We're going to try to figure out the variable names used in the closure as strings because that is crucial for workerization.
-// We will return an object mapping of true variable name to value (basically, the current scope as a JS object).
-// The reason we can't just use the original variable names is minifiers mangling the toplevel scope.
+// This is possibly the craziest part of the entire codebase, despite how
+//   simple it may seem.
+// The only parameter to this function is a closure that returns an array of
+//   variables outside of the function scope.
+// We're going to try to figure out the variable names used in the closure as
+//   strings because that is crucial for workerization.
+// We will return an object mapping of true variable name to value (basically,
+//   the current scope as a JS object).
+// The reason we can't just use the original variable names is minifiers
+//   mangling the toplevel scope.
 
 // This took me three weeks to figure out how to do.
 const wcln = (fn: () => unknown[], fnStr: string, td: Record<string, unknown>) => {
     const dt = fn()
     const st = fn.toString()
-    const ks = st.slice(st.indexOf('[') + 1, st.lastIndexOf(']')).replace(/\s+/g, '').split(',')
+    const ks = st.slice(
+        st.indexOf('[') + 1,
+        st.lastIndexOf(']')
+    ).replace(/\s+/g, '').split(',')
+
     for (let i = 0; i < dt.length; ++i) {
         const v = dt[i]; const k = ks[i]
         if (typeof v === 'function') {
@@ -1128,30 +1166,51 @@ type CachedWorker = {
 const ch: CachedWorker[] = []
 
 // clone bufs
-const cbfs = (v: Record<string, unknown>) => {
+const cbfs = (v:Record<string, unknown>) => {
     const tl: ArrayBuffer[] = []
+
     for (const k in v) {
         if ((v[k] as Uint8Array).buffer) {
-            tl.push((v[k] = new (v[k].constructor as typeof U8)(v[k] as Uint8Array)).buffer)
+            tl.push((v[k] = new (v[k].constructor as typeof U8)(
+                v[k] as Uint8Array
+            )).buffer)
         }
     }
+
     return tl
 }
 
 // use a worker to execute code
-const wrkr = <T, R>(fns: (() => unknown[])[], init: (ev: MessageEvent<T>) => void, id: number, cb: (err: FlateError, msg: R) => void) => {
+const wrkr = <T, R>(
+    fns:(() => unknown[])[],
+    init:(ev: MessageEvent<T>) => void,
+    id: number,
+    cb: (err:FlateError, msg:R) => void
+) => {
     if (!ch[id]) {
         let fnStr = ''; const td: Record<string, unknown> = {}; const m = fns.length - 1
         for (let i = 0; i < m; ++i) { fnStr = wcln(fns[i], fnStr, td) }
         ch[id] = { c: wcln(fns[m], fnStr, td), e: td }
     }
     const td = mrg({}, ch[id].e)
-    return wk(ch[id].c + ';onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage=' + init.toString() + '}', id, td, cbfs(td), cb)
+
+    return wk(
+        ch[id].c +
+            ';onmessage=function(e){for(var k in e.data)self[k]=e.data[k];onmessage=' +
+            init.toString() + '}',
+        id,
+        td,
+        cbfs(td),
+        cb
+    )
 }
 
 // base async inflate fn
-const bInflt = () => [U8, U16, i32, fleb, fdeb, clim, fl, fd, flrm, fdrm, rev, ec, hMap, max, bits, bits16, shft, slc, err, inflt, inflateSync, pbf, gopt]
-const bDflt = () => [U8, U16, i32, fleb, fdeb, clim, revfl, revfd, flm, flt, fdm, fdt, rev, deo, et, hMap, wbits, wbits16, hTree, ln, lc, clen, wfblk, wblk, shft, slc, dflt, dopt, deflateSync, pbf]
+const bInflt = () => [U8, U16, i32, fleb, fdeb, clim, fl, fd, flrm, fdrm, rev,
+    ec, hMap, max, bits, bits16, shft, slc, err, inflt, inflateSync, pbf, gopt]
+const bDflt = () => [U8, U16, i32, fleb, fdeb, clim, revfl, revfd, flm, flt,
+    fdm, fdt, rev, deo, et, hMap, wbits, wbits16, hTree, ln, lc, clen, wfblk,
+    wblk, shft, slc, dflt, dopt, deflateSync, pbf]
 
 // gzip extra
 const gze = () => [gzh, gzhl, wbytes, crc, crct]
@@ -1163,7 +1222,9 @@ const zle = () => [zlh, wbytes, adler]
 const zule = () => [zls]
 
 // post buf
-const pbf = (msg: Uint8Array) => (postMessage as Worker['postMessage'])(msg, [msg.buffer])
+const pbf = (msg:Uint8Array) => (
+    postMessage as Worker['postMessage']
+)(msg, [msg.buffer])
 
 // get opts
 const gopt = (o?: AsyncInflateOptions) => o && {
@@ -1172,7 +1233,14 @@ const gopt = (o?: AsyncInflateOptions) => o && {
 }
 
 // async helper
-const cbify = <T extends AsyncOptions>(dat: Uint8Array, opts: T, fns: (() => unknown[])[], init: (ev: MessageEvent<[Uint8Array, T]>) => void, id: number, cb: FlateCallback) => {
+const cbify = <T extends AsyncOptions>(
+    dat:Uint8Array,
+    opts:T,
+    fns:(() => unknown[])[],
+    init:(ev: MessageEvent<[Uint8Array, T]>) => void,
+    id:number,
+    cb:FlateCallback
+) => {
     const w = wrkr<[Uint8Array, T], Uint8Array>(
         fns,
         init,
@@ -1209,8 +1277,10 @@ const astrmify = <T>(fns: (() => unknown[])[], strm: Astrm, opts: T | 0, init: (
         init,
         id,
         (err, dat) => {
-            if (err) w.terminate(), strm.ondata.call(strm, err)
-            else if (!Array.isArray(dat)) ext!(dat)
+            if (err) {
+                w.terminate()
+                strm.ondata.call(strm, err)
+            } else if (!Array.isArray(dat)) ext!(dat)
             else if (dat.length === 1) {
                 strm.queuedSize -= dat[0]
                 if (strm.ondrain) strm.ondrain(dat[0])
@@ -1250,7 +1320,7 @@ const wbytes = (d: Uint8Array, b: number, v: number) => {
 }
 
 // gzip header
-const gzh = (c: Uint8Array, o: GzipOptions) => {
+const gzh = (c:Uint8Array, o:GzipOptions) => {
     const fn = o.filename
     c[0] = 31, c[1] = 139, c[2] = 8, c[8] = o.level < 2 ? 4 : o.level === 9 ? 2 : 0, c[9] = 3 // assume Unix
     if (o.mtime !== 0) wbytes(c, 4, Math.floor((new Date(o.mtime as (string | number) || Date.now()) as unknown as number) / 1000))
@@ -1283,7 +1353,8 @@ const gzhl = (o: GzipOptions) => 10 + (o.filename ? o.filename.length + 1 : 0)
 
 // zlib header
 const zlh = (c: Uint8Array, o: ZlibOptions) => {
-    const lv = o.level; const fl = lv == 0 ? 0 : lv < 6 ? 1 : lv == 9 ? 3 : 2
+    const lv = o.level
+    const fl = lv == 0 ? 0 : (lv || NaN) < 6 ? 1 : lv == 9 ? 3 : 2
     c[0] = 120, c[1] = (fl << 6) | (o.dictionary && 32)
     c[1] |= 31 - ((c[0] << 8) | c[1]) % 31
     if (o.dictionary) {
@@ -1295,8 +1366,17 @@ const zlh = (c: Uint8Array, o: ZlibOptions) => {
 
 // zlib start
 const zls = (d: Uint8Array, dict?: unknown) => {
-    if ((d[0] & 15) !== 8 || (d[0] >> 4) > 7 || ((d[0] << 8 | d[1]) % 31)) err(6, 'invalid zlib data')
-    if ((d[1] >> 5 & 1) === +!dict) err(6, 'invalid zlib data: ' + (d[1] & 32 ? 'need' : 'unexpected') + ' dictionary')
+    if ((d[0] & 15) !== 8 || (d[0] >> 4) > 7 || ((d[0] << 8 | d[1]) % 31)) {
+        err(6, 'invalid zlib data')
+    }
+    if ((d[1] >> 5 & 1) === +!dict) {
+        err(
+            6,
+            'invalid zlib data: ' + (d[1] & 32 ?
+                'need' :
+                'unexpected') + ' dictionary'
+        )
+    }
     return (d[1] >> 3 & 4) + 2
 }
 
@@ -2830,110 +2910,110 @@ const wzf = (o: Uint8Array, b: number, c: number, d: number, e: number) => {
  * A stream that can be used to create a file in a ZIP archive
  */
 export interface ZipInputFile extends ZipAttributes {
-  /**
-   * The filename to associate with the data provided to this stream. If you
-   * want a file in a subdirectory, use forward slashes as a separator (e.g.
-   * `directory/filename.ext`). This will still work on Windows.
-   */
-  filename: string;
+    /**
+     * The filename to associate with the data provided to this stream. If you
+     * want a file in a subdirectory, use forward slashes as a separator (e.g.
+     * `directory/filename.ext`). This will still work on Windows.
+     */
+    filename: string;
 
-  /**
-   * The size of the file in bytes. This attribute may be invalid after
-   * the file is added to the ZIP archive; it must be correct only before the
-   * stream completes.
-   *
-   * If you don't want to have to compute this yourself, consider extending the
-   * ZipPassThrough class and overriding its process() method, or using one of
-   * ZipDeflate or AsyncZipDeflate.
-   */
-  size: number;
+    /**
+     * The size of the file in bytes. This attribute may be invalid after
+     * the file is added to the ZIP archive; it must be correct only before the
+     * stream completes.
+     *
+     * If you don't want to have to compute this yourself, consider extending the
+     * ZipPassThrough class and overriding its process() method, or using one of
+     * ZipDeflate or AsyncZipDeflate.
+     */
+    size:number;
 
-  /**
-   * A CRC of the original file contents. This attribute may be invalid after
-   * the file is added to the ZIP archive; it must be correct only before the
-   * stream completes.
-   *
-   * If you don't want to have to generate this yourself, consider extending the
-   * ZipPassThrough class and overriding its process() method, or using one of
-   * ZipDeflate or AsyncZipDeflate.
-   */
-  crc: number;
+    /**
+     * A CRC of the original file contents. This attribute may be invalid after
+     * the file is added to the ZIP archive; it must be correct only before the
+     * stream completes.
+     *
+     * If you don't want to have to generate this yourself, consider extending the
+     * ZipPassThrough class and overriding its process() method, or using one of
+     * ZipDeflate or AsyncZipDeflate.
+     */
+    crc:number;
 
-  /**
-   * The compression format for the data stream. This number is determined by
-   * the spec in PKZIP's APPNOTE.txt, section 4.4.5. For example, 0 = no
-   * compression, 8 = deflate, 14 = LZMA
-   */
-  compression: number;
+    /**
+     * The compression format for the data stream. This number is determined by
+     * the spec in PKZIP's APPNOTE.txt, section 4.4.5. For example, 0 = no
+     * compression, 8 = deflate, 14 = LZMA
+     */
+    compression:number;
 
-  /**
-   * Bits 1 and 2 of the general purpose bit flag, specified in PKZIP's
-   * APPNOTE.txt, section 4.4.4. Should be between 0 and 3. This is unlikely
-   * to be necessary.
-   */
-  flag?: number;
+    /**
+     * Bits 1 and 2 of the general purpose bit flag, specified in PKZIP's
+     * APPNOTE.txt, section 4.4.4. Should be between 0 and 3. This is unlikely
+     * to be necessary.
+     */
+    flag?:number;
 
-  /**
-   * The handler to be called when data is added. After passing this stream to
-   * the ZIP file object, this handler will always be defined. To call it:
-   *
-   * `stream.ondata(error, chunk, final)`
-   *
-   * error = any error that occurred (null if there was no error)
-   *
-   * chunk = a Uint8Array of the data that was added (null if there was an
-   * error)
-   *
-   * final = boolean, whether this is the final chunk in the stream
-   */
-  ondata?: AsyncFlateStreamHandler;
+    /**
+     * The handler to be called when data is added. After passing this stream to
+     * the ZIP file object, this handler will always be defined. To call it:
+     *
+     * `stream.ondata(error, chunk, final)`
+     *
+     * error = any error that occurred (null if there was no error)
+     *
+     * chunk = a Uint8Array of the data that was added (null if there was an
+     * error)
+     *
+     * final = boolean, whether this is the final chunk in the stream
+     */
+    ondata?:AsyncFlateStreamHandler;
 
-  /**
-   * A method called when the stream is no longer needed, for clean-up
-   * purposes. This will not always be called after the stream completes,
-   * so you may wish to call this.terminate() after the final chunk is
-   * processed if you have clean-up logic.
-   */
-  terminate?: AsyncTerminable;
+    /**
+     * A method called when the stream is no longer needed, for clean-up
+     * purposes. This will not always be called after the stream completes,
+     * so you may wish to call this.terminate() after the final chunk is
+     * processed if you have clean-up logic.
+     */
+    terminate?:AsyncTerminable;
 }
 
 type AsyncZipDat = ZHF & {
-  // compressed data
-  c: Uint8Array;
-  // filename
-  f: Uint8Array;
-  // comment
-  m?: Uint8Array;
-  // unicode
-  u: boolean;
+    // compressed data
+    c:Uint8Array;
+    // filename
+    f:Uint8Array;
+    // comment
+    m?:Uint8Array;
+    // unicode
+    u:boolean;
 };
 
 type ZipDat = AsyncZipDat & {
-  // offset
-  o: number;
+    // offset
+    o: number;
 }
 
 /**
  * A pass-through stream to keep data uncompressed in a ZIP archive.
  */
 export class ZipPassThrough implements ZipInputFile {
-    filename: string
-    crc: number
-    size: number
-    compression: number
-    os?: number
-    attrs?: number
-    comment?: string
-    extra?: Record<number, Uint8Array>
-    mtime?: GzipOptions['mtime']
-    ondata: AsyncFlateStreamHandler
-    private c: CRCV
+    filename:string
+    crc:number
+    size:number
+    compression:number
+    os?:number
+    attrs?:number
+    comment?:string
+    extra?:Record<number, Uint8Array>
+    mtime?:GzipOptions['mtime']
+    ondata:AsyncFlateStreamHandler
+    private c:CRCV
 
     /**
-   * Creates a pass-through stream that can be added to ZIP archives
-   * @param filename The filename to associate with this data stream
-   */
-    constructor (filename: string) {
+     * Create a pass-through stream that can be added to ZIP archives
+     * @param filename The filename to associate with this data stream
+     */
+    constructor (filename:string) {
         this.filename = filename
         this.c = crc()
         this.size = 0
@@ -2941,14 +3021,14 @@ export class ZipPassThrough implements ZipInputFile {
     }
 
     /**
-   * Processes a chunk and pushes to the output stream. You can override this
-   * method in a subclass for custom behavior, but by default this passes
-   * the data through. You must call this.ondata(err, chunk, final) at some
-   * point in this method.
-   * @param chunk The chunk to process
-   * @param final Whether this is the last chunk
-   */
-    protected process (chunk: Uint8Array, final: boolean) {
+     * Processes a chunk and pushes to the output stream. You can override this
+     * method in a subclass for custom behavior, but by default this passes
+     * the data through. You must call this.ondata(err, chunk, final) at some
+     * point in this method.
+     * @param chunk The chunk to process
+     * @param final Whether this is the last chunk
+     */
+    protected process (chunk:Uint8Array, final:boolean) {
         this.ondata(null, chunk, final)
     }
 
@@ -3401,6 +3481,7 @@ export function zipSync (data: Zippable, opts?: ZipOptions) {
         const d = compression ? deflateSync(file, p) : file; const l = d.length
         const c = crc()
         c.p(file)
+
         files.push(mrg(p, {
             size: file.length,
             crc: c.d(),
