@@ -229,7 +229,7 @@
         "npm test passes (node and browser suites, plain and minified)"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "manual": true,
       "notes": "Blocked and excluded from the autonomous loop: the only reproducer is a 404 URL, so an agent cannot obtain the failing input. Needs a human to supply an archive or narrow the trigger. From TODO/eof-inflate-zip.md."
     }
