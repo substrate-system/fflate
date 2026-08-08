@@ -1,0 +1,641 @@
+## Codebase Patterns
+
+- `tsconfig.json` maps the bare specifier `fflate` to `./src/index.ts`, so
+  node tests can `import { x } from 'fflate'` and get the SOURCE, no build
+  needed. `test/3-node-min.ts` is the exception: it deliberately imports
+  `../dist/node/index{,.min}.js` to cover the shipped bundles.
+- The node suite is a set of numerically-prefixed files that `test/index.ts`
+  imports in order. Adding a new file means adding its import there too --
+  tapzero has no CLI runner, so an unimported file simply never runs.
+- Run one file at a time with `npx tsx test/<file>.ts`. Files that only
+  export a suite function (everything under `test/browser/`) cannot be run
+  this way; see the temporary-entry recipe in the mission prompt.
+- To sanity-check something against a built bundle, write a real `.mjs`
+  file at the repo root and run `node ./tmp-x.mjs`. Never
+  `node --input-type=module -e` -- it poisons worker `execArgv` (CLAUDE.md).
+- `npm run lint` prints a `@stylistic` deprecation warning about
+  `type-annotation-spacing` on every run. It is pre-existing noise, not a
+  failure; exit code 0 is the signal.
+- `tsc --noEmit` has `listFiles: true`, so a passing run still prints
+  hundreds of paths. Grep for `error TS` rather than reading the tail.
+- Worker payloads: `bInflt`/`bDflt` (`src/index.ts`) list the values shipped
+  into a worker. `wcln` parses the TEXT of those array literals for the
+  identifier names, stringifies anything callable, and posts everything
+  else as data. Any value a stringified function references at runtime must
+  appear in the array by name, or the worker gets a ReferenceError. Note
+  that `bDflt` does NOT contain `err`, and does not need to -- the deflate
+  worker path never throws a FlateError.
+
+---
+
+## 2026-08-08 - US-001 Make FlateError a real exported class
+
+- Replaced `export interface FlateError extends Error` with a real
+  `export class FlateError extends Error` carrying `code:number` and
+  `name = 'FlateError'`. `err()` now constructs it and keeps both its `msg`
+  override and its `nt` no-throw argument; message strings from `ec` are
+  unchanged.
+- Added `FlateError` to the `bInflt` worker payload array, immediately
+  before `err`, since `err` is stringified into the inflate worker and
+  constructs the class there.
+- Added `test/4-error-class.ts` (14 assertions) and wired it into
+  `test/index.ts`.
+- Files changed: `src/index.ts`, `test/index.ts`, `test/4-error-class.ts`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - The story's acceptance criteria said to add the class to BOTH `bInflt`
+    and `bDflt` "next to `err`". `bDflt` has no `err` -- no deflate-side
+    code path calls it -- so adding `FlateError` there would ship dead
+    bytes into every deflate worker for no behavior change. Added it to
+    `bInflt` only. Verified by grepping every `err(` call site: none are
+    inside `dflt`/`dopt`/`deflateSync`.
+  - Deliberately did NOT let the class body look up its own message from
+    `ec`. `ec` is in `bInflt` but not `bDflt`, and keeping the lookup in
+    `err()` leaves the class body with zero free variables, so it is safe
+    to drop into any worker payload later (relevant for US-002).
+  - `wcln`'s `v.prototype` branch iterates `for (const t in v.prototype)`.
+    Class methods are non-enumerable, so a class with methods would have
+    them SILENTLY DROPPED from the worker copy. `FlateError` has no
+    methods, only the constructor (which `toString()` includes), so it is
+    fine -- but do not add a method to it without revisiting `wcln`.
+  - `keepNames` stays false and terser mangles the toplevel binding, but
+    `class X extends Error{}` survives because `wcln` emits a named class
+    EXPRESSION (`;n=class n extends Error{...}`). Verified against
+    `dist/node/index.min.js`: sync `instanceof FlateError` is true and the
+    async worker path still delivers `.code` and the right message.
+  - Async/worker errors are still plain `Error` on the receiving side --
+    structured clone drops the prototype. That is exactly US-002's scope
+    and is intentionally untouched here.
+  - Verified: `npx tsx test/4-error-class.ts` (14/14), `npm run test:node`
+    (48/48), `npm test` full suite (browser 322/322), `npm run lint`,
+    `tsc --noEmit` against both `tsconfig.json` and `tsconfig.build.json`.
+
+---
+
+## 2026-08-08 - US-002 Preserve FlateError identity across the worker boundary
+
+- Added `rhyd` to `src/index.ts` and wired it into `wrkr`'s callback, so
+  every error coming back from a worker is rebuilt as a real `FlateError`
+  when it carries a numeric `code`. The worker-side `stack` is kept.
+  Errors without a numeric `code` (worker exited nonzero, OOM, a TypeError
+  from user code) pass through unchanged.
+- Added `test/5-async-error.ts` (20 assertions) and wired it into
+  `test/index.ts`. It covers a callback-style API (`inflate`) and a
+  worker-backed streaming class (`AsyncInflate`), each against both
+  `dist/node/index.js` and `dist/node/index.min.js`.
+- Documented the boundary in `docs/architecture/components.md`.
+- Files changed: `src/index.ts`, `test/index.ts`, `test/5-async-error.ts`,
+  `docs/architecture/components.md`, `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - `wrkr` (src/index.ts) is the ONLY choke point for worker errors --
+    `cbify` and `astrmify` both route through it, and nothing else calls
+    `wk` directly. Anything that needs to touch every async error path
+    belongs there, not duplicated per API.
+  - Both spawners already preserved the numeric `code`, the `message`, the
+    `stack`, AND the `name`. Only the prototype was lost. So a test that
+    asserts on `e.name === 'FlateError'` passes even with the bug present
+    -- it is not a valid regression guard. Assert `instanceof`.
+  - A NODE test cannot exercise the worker path against `src/`. tsconfig
+    maps `fflate` to `./src/index.ts`, and tsx transpiles with esbuild's
+    `keepNames` on, so the stringified worker payload contains
+    `__name(fn, '...')` and dies with `ReferenceError: __name is not
+    defined` before any real work. Import `../dist/node/index.js`
+    instead, like test/3-node-min.ts does. This means the file needs a
+    prior `npm run build`, same as 3-node-min.ts.
+  - Rehydration is deliberately keyed on `typeof e.code === 'number'`
+    rather than on `name === 'FlateError'`. `err()` is the only thing
+    that sets a numeric `code`, and keying off `name` would let anything
+    that happens to be called FlateError through.
+  - Verified: `npx tsx test/5-async-error.ts` (20/20), full `npm test`
+    (node 68/68, browser 322/322), `npm run lint`, `tsc --noEmit` against
+    both `tsconfig.json` and `tsconfig.build.json`.
+
+---
+## 2026-08-08 - US-003 Expose external file attributes and isDirectory
+
+- `zh` (src/index.ts) now also returns the external file attributes dword
+  at central-directory offset `b + 38`. Added a module-level `isdir(at, fn)`
+  helper and two new `UnzipFileInfo` members, `attrs:number` and
+  `isDirectory:boolean`, wired into the filter object literals in BOTH
+  `unzip` and `unzipSync` in the same change.
+- Added `test/6-unzip-attrs.ts` (24 assertions) and imported it from
+  `test/index.ts`. Documented the new fields in the README filter example.
+- Files changed: `src/index.ts`, `test/index.ts`, `test/6-unzip-attrs.ts`,
+  `README.md`, `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - The central directory record layout, from the record start: sig 0,
+    version made by 4, version needed 6, flags 8, method 10, dostime 12,
+    crc 16, csize 20, usize 24, fnlen 28, extralen 30, commentlen 32,
+    disk 34, internal attrs 36, EXTERNAL ATTRS 38, local header offset 42,
+    filename 46. `zh` already read most of these; only 38 was unused.
+  - `b4` is UNSIGNED, so any unix `st_mode` in the high half comes back
+    above 2^31. `attrs` is deliberately left unsigned to match. A test that
+    computes its expectation as `0o100644 << 16` gets a NEGATIVE number and
+    fails -- use `(m << 16) >>> 0`. Same trap applies to `isdir`, which
+    uses `at >>> 16` for that reason.
+  - `zh` returns an `as const` tuple destructured at exactly two call sites
+    (`unzip`, `unzipSync`). Appending to the tuple is safe; both sites must
+    still be edited together because of the declaration-emit invariant in
+    CLAUDE.md. Confirmed: `tsc --emitDeclarationOnly` is what catches a
+    missed one, not the runtime tests.
+  - `zipSync` writes 0 into external file attributes for every entry, so it
+    cannot produce a fixture that exercises the DOS or unix bits. The test
+    builds an archive with `zipSync(..., {level:0})` and then patches
+    `o + 38` in each central-directory record via a `DataView`, walking
+    from the EOCD. That keeps the fixture a real, tool-readable ZIP with no
+    binary blob checked in.
+  - The streaming `Unzip`/`UnzipFile` path does NOT go through `zh` -- it
+    reads LOCAL file headers, which have no external attributes field at
+    all. US-004 will need a different source for `isDirectory` there.
+  - Verified: `npx tsx test/6-unzip-attrs.ts` (24/24), full `npm test`
+    (node 92/92, browser 322/322), `npm run lint`, `tsc --noEmit` against
+    both `tsconfig.json` and `tsconfig.build.json`. Also confirmed the new
+    test fails 21/24 with `src/index.ts` stashed.
+
+---
+## 2026-08-08 - US-004 Expose isDirectory on the streaming UnzipFile
+
+- Added `isDirectory:boolean` to the `UnzipFile` interface and to the
+  `} as UnzipFile` object literal in `Unzip.push`, computed as
+  `isdir(0, fn)`. Local file headers carry no external file attributes,
+  so the attribute half of `isdir` is unreachable on this path and only
+  the trailing-'/' check can fire. The doc comment says so and points at
+  `UnzipFileInfo.attrs` / `UnzipFileInfo.isDirectory` for the reliable
+  signal.
+- Added the browser test `Unzip streaming isDirectory` to
+  `test/browser/zip.ts`. The fixture archive holds a directory entry
+  (`dir/`), an EMPTY file, and a normal file, so the assertion actually
+  distinguishes a directory from a zero-length file -- which is the whole
+  point of the issue in TODO/metadata.md.
+- Files changed: `src/index.ts`, `test/browser/zip.ts`, `specs/prd.json`,
+  `progress.log`.
+
+- **Learnings for future iterations:**
+  - Reusing `isdir(0, fn)` rather than inlining a `endsWith('/')` keeps
+    the two code paths honest: if the directory heuristic ever changes,
+    both `unzip`/`unzipSync` and the streaming path change together.
+  - The `} as UnzipFile` invariant in CLAUDE.md is real and was confirmed
+    again here. With the interface member added and the literal NOT
+    updated, `npm run build` and both `tsc --noEmit` runs stayed green;
+    only the browser test caught the missing property. Verified by
+    running the new test against the pre-change build: 46/49, with the
+    three isDirectory assertions failing.
+  - Note the asymmetry from US-003: adding a required member to
+    `UnzipFileInfo` BREAKS declaration emit (contextually typed filter
+    args), adding one to `UnzipFile` does not. Do not generalize from one
+    to the other.
+  - The temporary-entry recipe from the mission prompt works as written;
+    grep the output for `# tests` to confirm the count is non-zero, since
+    a suite that registers nothing still reports a green run.
+  - Verified: temp-entry run of `zipSuite` (49/49), full `npm test`
+    (node 92/92, browser 330/330), `npm run lint` (exit 0),
+    `tsc --noEmit` against both `tsconfig.json` and `tsconfig.build.json`.
+
+---
+## 2026-08-08 - US-005 Expose the raw filename bytes on UnzipFileInfo
+
+- `zh` now also returns the raw filename bytes and bit 11 of the general
+  purpose bit flag. It already read both -- the bytes to hand to
+  `strFromU8`, the bit to choose latin1 vs UTF-8 -- so this is a rename
+  and two extra tuple slots, no new parsing.
+- `UnzipFileInfo` gains `rawName:Uint8Array` and `nameIsUTF8:boolean`,
+  and BOTH filter object literals (`unzip`, `unzipSync`) were updated in
+  the same commit, per the declaration-emit invariant in CLAUDE.md.
+- `name` is untouched: a non-UTF-8 name still comes back latin1-decoded,
+  which is lossless byte-for-byte but reads as mojibake. The doc comment
+  shows the `new TextDecoder('cp866').decode(info.rawName)` fix.
+- Added `test/7-unzip-rawname.ts` (14 assertions) and wired it into
+  `test/index.ts`.
+- Files changed: `src/index.ts`, `test/index.ts`,
+  `test/7-unzip-rawname.ts`, `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - `rawName` is deliberately a SUBARRAY VIEW onto the caller's buffer,
+    not a copy. `zh` runs for every central directory entry regardless of
+    whether a filter is supplied, so a copy would cost one allocation per
+    entry for the large majority of callers who never look at it. The
+    doc comment says so; tests that stash the value across entries must
+    `.slice()` it themselves.
+  - `zipSync`/`zip` set bit 11 exactly when `strToU8(fn).length !==
+    fn.length`, i.e. whenever the name is non-ASCII. So fflate can NEVER
+    write a non-UTF-8 filename, and an ASCII name always reports
+    `nameIsUTF8: false` (correctly -- the bit is genuinely clear, and
+    ASCII needs no decoding).
+  - Building a legacy-code-page fixture therefore means patching. Write
+    the archive with an ASCII placeholder name of exactly the target BYTE
+    length, then overwrite the filename bytes in BOTH the central
+    directory record (o + 46) and the local file header it points at
+    (b4(o + 42) + 30). Lengths match so nothing moves, and bit 11 is
+    already clear because the placeholder was ASCII. This differs from
+    the US-003 fixture, which only had to patch the central directory.
+  - cp866 is a single-byte code page, so `TextDecoder('cp866')` can be
+    inverted over bytes 0..255 to get an encoder. Doing that in the test
+    keeps the expected bytes derived from the same table the assertion
+    decodes with, instead of a hand-copied hex literal. Node ships full
+    ICU, so `cp866` is available without a flag.
+  - Verified: `npx tsx test/7-unzip-rawname.ts` (14/14), and the same
+    file fails hard with `src/index.ts` stashed. Full `npm test` (node
+    106/106, browser 330/330), `npm run lint` (exit 0), `tsc --noEmit`
+    against both `tsconfig.json` and `tsconfig.build.json`.
+
+---
+## 2026-08-08 - US-006 Expose the raw filename bytes on the streaming UnzipFile
+
+- Added `rawName:Uint8Array` and `nameIsUTF8:boolean` to the `UnzipFile`
+  interface and, critically, to the `} as UnzipFile` object literal in
+  `Unzip.push`. The bytes come from the LOCAL file header, which carries
+  the same filename bytes and the same bit-11 flag as the central
+  directory record `zh` reads for `UnzipFileInfo` (US-005).
+- The name line was `strFromU8(buf.subarray(i + 30, i += 30 + fnl), !u)`.
+  It is now `const rn = slc(buf, i + 30, i += 30 + fnl)` followed by
+  `strFromU8(rn, !u)`. `slc` COPIES; the assignment expression still
+  advances `i` in the same place, so the surrounding offsets are
+  unchanged.
+- Added a browser test `Unzip streaming rawName and nameIsUTF8` to
+  `test/browser/zip.ts`, plus the cp866 fixture helpers it needs
+  (`cp866Encode`, `latin1`, `cp866Fixture`) at the top of that file.
+- Files changed: `src/index.ts`, `test/browser/zip.ts`, `specs/prd.json`,
+  `progress.log`.
+
+- **Learnings for future iterations:**
+  - `UnzipFile.rawName` is a COPY while `UnzipFileInfo.rawName` is a
+    VIEW, and that asymmetry is deliberate -- both are documented in
+    place. `zh` reads out of the single caller-owned archive buffer that
+    stays alive for the whole call, so a view is free and safe there. In
+    `Unzip.push` the source `buf` is either the caller's chunk (which
+    they may reuse or mutate once `push` returns) or an internal
+    concatenation that the next `push` throws away, and the `file`
+    object outlives both. A view there would rot. Cost is one
+    filename-sized allocation per entry, not per chunk.
+  - The `} as UnzipFile` trap from CLAUDE.md is real and silent: with
+    only the interface members added, `npm run build`, `tsc --noEmit`
+    against BOTH tsconfigs, and `npm run lint` all pass while the
+    properties are simply absent at runtime. Only the browser test
+    catches it. Confirmed again this session.
+  - Adding to `UnzipFile` is much easier than adding to `UnzipFileInfo`:
+    there are no contextually-typed call sites to update, because
+    nothing constructs an `UnzipFile` outside `Unzip.push`.
+  - Chromium's `TextDecoder` supports `'cp866'` (the WHATWG label for
+    IBM866), so the same decoder-inversion trick `test/7-unzip-rawname.ts`
+    uses in node works unmodified in the browser suite. Those helpers are
+    duplicated rather than shared: `test/7-*` imports from `'fflate'`
+    (source, via the tsconfig path map) while browser suites take the
+    bundle as an `f` parameter, so there is no import both sides can use.
+  - `zipSync` cannot produce a non-UTF-8 filename -- it always writes
+    UTF-8 and sets bit 11 for any non-ASCII name. The fixture writes an
+    ASCII placeholder of exactly the same byte length (bit 11 stays
+    clear) and patches the bytes into both the central and the local
+    header afterwards. Streaming reads the LOCAL header, so patching
+    only the central record would have produced a false pass.
+  - Verified: the new test fails 7/7 of its assertions against the
+    pre-change bundle and passes after. Full `npm test` (node 106/106,
+    browser 346/346), `npm run lint` (exit 0), `tsc --noEmit` against
+    both `tsconfig.json` and `tsconfig.build.json`.
+
+---
+
+## 2026-08-08 - US-007 Document decoding non-UTF-8 ZIP filenames
+
+- Added a `### Non-UTF-8 Filenames` subsection to `README.md`, at the end
+  of the Example section just after Zip Streams, plus the matching TOC
+  entry. It explains bit 11 of the general purpose bit flag, shows a
+  `realName()` helper used from both the `unzipSync` filter and the
+  streaming `Unzip` callback, states that `name` stays the UTF-8
+  decoding and that fflate does not guess an encoding, and calls out
+  that `UnzipFileInfo.rawName` is a view while `UnzipFile.rawName` is a
+  copy.
+- Files changed: `README.md`, `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - Docs-only story, so no test was added (mission rule 3). Instead the
+    README recipe was run VERBATIM before committing: a scratch
+    `tmp-readme-check.ts` at the repo root built the cp866 fixture the
+    same way `test/7-unzip-rawname.ts` does, pasted in the README's
+    `realName` helper, and asserted both the sync filter path and the
+    streaming path recover `привет.txt`. Deleted before committing. This
+    is a cheap way to keep README snippets honest -- `tsconfig.json`
+    maps `fflate` to `src/index.ts`, so `npx tsx tmp-*.ts` at the root
+    runs against source with no build.
+  - The README TOC between `<!-- toc -->` and `<!-- tocstop -->` is
+    hand-maintained in practice (no npm script regenerates it), so a new
+    heading needs its bullet added by hand. Anchor form is the GitHub
+    slug: `### Non-UTF-8 Filenames` -> `#non-utf-8-filenames`.
+  - `unzipSync`/`unzip` still key the returned object by the mojibake
+    `name`; there is no option to rekey. Any doc or code that wants
+    decoded names has to build its own mapping from inside the filter,
+    which is what the README snippet shows.
+  - Verified: `npm test` (346/346, node and browser, plain and
+    minified), `npm run lint` (exit 0), `tsc --noEmit` against both
+    `tsconfig.json` and `tsconfig.build.json`.
+
+---
+## 2026-08-08 - US-008 Stop emitting zero-length non-final chunks
+
+- `Inflate.c` (`src/index.ts`) now suppresses the `ondata` call when the
+  produced chunk is empty AND the call is not the end-of-stream one:
+  `if (out.length || this.d) this.ondata(out, this.d)`. Every streaming
+  decompressor funnels through this one method -- `Gunzip` and `Unzlib`
+  literally call `Inflate.prototype.c.call(this, ...)`, and `Decompress`
+  delegates to one of the three -- so a single guard covers all four.
+- Added `test/8-stream-chunks.ts` (40 assertions) and wired it into
+  `test/index.ts`.
+- Files changed: `src/index.ts`, `test/index.ts`, `test/8-stream-chunks.ts`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - Confirmed the TODO/callback.md repro against the source before
+    touching anything: `Gunzip` gave `[11/false, 0/false, 0/true]` and
+    `Decompress` (which picks `Gunzip`) gave the same. `Inflate` and
+    `Unzlib` were already `[11/true]` -- the bug was gzip-specific, but
+    the fix belongs in the shared method, not in `Gunzip.push`.
+  - Where the three callbacks come from: `Gunzip.push` calls `c(0)` to
+    inflate, then checks `s.f && !s.l` for a concatenated member. For a
+    single-member gzip that check is TRUE (the trailer looks like the
+    start of another member until proven otherwise), so it resets state
+    and RE-ENTERS `push` with an empty chunk. That recursive call does
+    `c(0)` -- empty, non-final -- and then `c(final)` -- empty, final.
+    The outer `else if (final)` is skipped because the concatenation
+    branch was taken, which is why exactly one `final: true` still fires.
+  - After the fix `Gunzip` emits `[11/false, 0/true]`, i.e. TWO
+    callbacks, not the single one 0.8.2 produced. That satisfies every
+    acceptance criterion (no empty non-final chunk, exactly one final)
+    and is the whole of this story's scope. Collapsing back to a single
+    callback would mean buffering the last member's output until the
+    concatenation probe resolves, which changes the streaming memory
+    profile. Downstream code must still CONCATENATE chunks rather than
+    keep the last one -- that is the contract US-009 documents.
+  - Suppressing messages does NOT desync the async/worker drain
+    accounting. `queuedSize` is decremented by a separate `[number]`
+    message that `astrm` posts on every `push`, independent of `ondata`.
+    The only `ondata`-coupled worker behavior is `if (dat[1]) w.terminate()`,
+    and the `final: true` emission is preserved unconditionally.
+  - Test-side gotcha: helpers taking a tapzero assertion object need
+    `import type { Test } from '@substrate-system/tapzero'`, otherwise the
+    parameter is an implicit any and lint fails.
+  - Verified: `npx tsx test/8-stream-chunks.ts` (40/40), `npm test`
+    (node 146/146, browser 346/346 plain and minified), `npm run lint`
+    (exit 0), `tsc --noEmit` against both `tsconfig.json` and
+    `tsconfig.build.json`.
+
+---
+## 2026-08-08 - US-009 Document the streaming callback emission contract
+
+- Expanded the doc comments on `FlateStreamHandler` and
+  `AsyncFlateStreamHandler` (`src/index.ts`) with the emission contract:
+  the handler may be called any number of times including zero, a small
+  input is not guaranteed to produce exactly one call, consumers must
+  CONCATENATE chunks rather than capture one, and exactly one call has
+  `final: true` and it is always the last.
+- Added a hand-maintained `## Unreleased` section to `CHANGELOG.md`
+  recording the 0.8.3 emission change and the US-008 fix, plus a comment
+  warning that `auto-changelog` regenerates from the first release
+  heading down, so hand-written notes must stay above it.
+- Files changed: `src/index.ts`, `CHANGELOG.md`, `specs/prd.json`,
+  `progress.log`.
+- No test was written. This story is documentation only: it adds no
+  runtime behavior, and the behavior it describes is already covered by
+  `test/8-stream-chunks.ts` from US-008. Per execution rule 3, skipping
+  test-first here and saying so.
+
+- **Learnings for future iterations:**
+  - `CHANGELOG.md` is GENERATED by `auto-changelog` from git history --
+    the header says so. It rebuilds every `## [vX.Y.Z]` section from the
+    first release heading downward. Hand-written content survives only
+    ABOVE that first heading, which is where the `Unreleased` section
+    now lives. Do not put hand notes between release sections.
+  - Verified the claim before writing it rather than assuming the US-008
+    fix generalised. `Inflate.c`'s guard covers DECOMPRESSION only;
+    `Deflate.p` calls `ondata` unconditionally. Measured the compressors
+    with a scratch `tmp-chk.ts`: `Deflate`/`Gzip`/`Zlib` each emitted
+    exactly `[[n, true]]` for `push(data)`, `push(empty)`,
+    `push(empty, true)` -- i.e. the two intermediate pushes emitted ZERO
+    callbacks. That is the concrete evidence for "may be called zero
+    times", and it is why the empty-chunk sentence is scoped to
+    "a streaming decompressor" rather than claimed for all streams.
+  - Typedoc `{@link X}` works in these comments; the async handler's doc
+    links back to `FlateStreamHandler` instead of duplicating the prose.
+    Do NOT run `npm run build-docs` to check it (CLAUDE.md forbids it --
+    it writes over `docs/`, which also holds implementation plans).
+  - Verified: `npm run lint` (exit 0), `tsc --noEmit` against both
+    `tsconfig.json` and `tsconfig.build.json` (no `error TS`), `npm test`
+    full suite (346/346, plain and minified), and a grep for em dashes
+    and arrow characters across both edited files (no hits).
+
+---
+
+## 2026-08-08 - US-010 Diagnose the flush(true) invalid stored block lengths bug
+
+- Investigation only. No source or test changes. Added
+  `specs/2026-08-08-flush-sync-corruption.md`.
+- Root cause: `Deflate.prototype.flush` (`src/index.ts:1530-1537`) passes
+  the PACKED `st.r` to `wfblk` as if it were a bit position, and omits the
+  `+ 1` for the BFINAL bit that every other `wfblk` call site includes.
+  `st.r` is `(pos & 7) | partialByte << 3`, so the correct call is
+  `wfblk(c, (this.s.r & 7) + 1, et)`.
+- Two failure modes, both confirmed by instrumenting the flush branch:
+  1. partial byte non-zero -- `o = shft(st.r + 2)` runs off the end of the
+     6-byte marker buffer, LEN/NLEN land at the wrong offsets or are
+     dropped entirely (typed-array out-of-range writes are silent no-ops).
+  2. bit offset exactly 6 with a zero partial byte -- the missing `+ 1`
+     makes `shft(8) = 1` instead of `shft(9) = 2`, emitting a 5-byte
+     marker where 6 are required. Offset 6 is the ONLY offset where the
+     missing `+ 1` matters alone.
+- Recorded first failing size for `'a'.repeat(n)`: n = 62472 (62471 passes).
+  It is NOT a threshold -- 63472 passes again, 70000/100000/200000 fail.
+  The real predicate is bit alignment, not length.
+- Fix verified out of tree, then reverted: the one-line change above was
+  applied and swept over ~2500 input sizes (0..2000 and every 617th up to
+  300000), asserting both `zlib.inflateRawSync` and fflate's `inflateSync`
+  recover the exact input. Zero failures. US-011 implements it for real.
+- Files changed: `specs/2026-08-08-flush-sync-corruption.md`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - `st.r` in `DeflateState` is a PACKED pair, not a bit count: low 3 bits
+    are `pos & 7`, the rest is the value of the pending partial byte. It is
+    produced in `dflt` at `src/index.ts:799`. Anything consuming it must
+    unpack both halves. This is the single easiest thing to get wrong in
+    the deflate streaming path.
+  - `wfblk(out, pos, dat)`'s `pos` is the bit position AFTER the BFINAL
+    bit, not before it. `dflt` writes BFINAL itself then calls
+    `wfblk(w, pos + 1, ...)`. A caller that forgets the `+ 1` is correct
+    for 7 of the 8 possible bit offsets, which is exactly why this survived.
+  - Out-of-range typed-array writes do not throw. A bad index in `wfblk`
+    silently produces a short, plausible-looking marker rather than an
+    error, so corruption shows up only at the far end in the inflater.
+  - To read private `Deflate` state during a repro, instrument the source
+    temporarily (`cp src/index.ts /tmp/...bak` first) rather than pushing
+    an extra empty chunk to peek -- an extra `push` calls `p()` and mutates
+    `s.r`/`s.i`/`s.w`, which silently changes the very state under study.
+    An early attempt at this produced misleading `st.r` values.
+  - Bugs in this area are bit-alignment dependent, not size dependent.
+    Do not binary-search for a "threshold" and trust it; sweep many sizes.
+---
+
+## 2026-08-08 - US-011 Fix flush(true) so sync-flushed output inflates
+
+- Applied the one-line fix from
+  `specs/2026-08-08-flush-sync-corruption.md`: `Deflate.flush`'s sync
+  branch now calls `wfblk(c, (this.s.r & 7) + 1, et)` instead of
+  `wfblk(c, this.s.r, et)`. `st.r` is a packed pair (bit offset in bits
+  0-2, pending partial byte in bits 3+), and `wfblk` wants the bit
+  position just after the BFINAL bit -- the mask unpacks the offset, the
+  `+ 1` counts the BFINAL bit that BFINAL being 0 lets us skip writing.
+  Added a comment at the call site explaining both halves, since neither
+  is inferable from the surrounding code.
+- Added `test/9-flush-sync.ts` (36 assertions) and imported it from
+  `test/index.ts`. It covers the eight sizes the diagnosis recorded
+  (including 62471 which passed before and 62472/70000/100000/200000
+  which did not), the `flush(false)` path unchanged, a four-part
+  multi-flush stream, and a 0..599 sweep over pseudo-random bytes. Every
+  case is asserted against BOTH fflate's `inflateSync` and node's
+  `zlib.inflateRawSync`.
+- Updated the spec's status header to FIXED and added an Unreleased
+  CHANGELOG entry.
+- Files changed: `src/index.ts`, `test/9-flush-sync.ts`, `test/index.ts`,
+  `CHANGELOG.md`, `specs/2026-08-08-flush-sync-corruption.md`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - Confirmed red before green: pre-fix the new file died at n=62472 with
+    `FlateError: unexpected EOF` from fflate's own inflater. Note that a
+    tapzero assertion which THROWS (rather than failing) aborts the whole
+    process, so a red run shows a stack trace and no `# fail` line. Do
+    not read the absence of `# fail` as a pass -- check for the `# ok`
+    footer and the assertion count.
+  - `npm test`'s tail only shows the browser suite. To confirm both, pipe
+    the whole run through `grep -E "^# (tests|pass|fail)|not ok"`; a
+    healthy run prints two `# tests` / `# pass` pairs (node then browser)
+    and no `not ok` lines.
+  - A typed-array write past the end is a silent no-op, not a throw. That
+    is what let this bug ship: `wfblk` computed an offset beyond the
+    6-byte marker buffer and simply dropped LEN/NLEN. Any time an index
+    into a fixed-size `U8` is derived from a bit cursor, an off-by-one
+    corrupts output without any runtime signal.
+  - The sweep test in `9-flush-sync.ts` uses a deterministic xorshift
+    (`seqBytes`) rather than `Math.random`, so a failure is reproducible
+    from the reported size alone. Reuse that shape for the US-012/US-013
+    streaming work, which the diagnosis expects to be alignment
+    dependent in the same way.
+  - The flush fix does NOT touch `st.i` / `st.w` / the LZ77 window, so it
+    is not expected to move US-012's out-of-window distance bug. Verified
+    only in the sense that the full suite is unchanged; US-012 should
+    still be diagnosed from scratch.
+---
+
+## 2026-08-08 - US-012 Diagnose the streaming Deflate invalid distance bug
+
+- Investigation only, no source or test changes. Wrote
+  `specs/2026-08-08-streaming-deflate-invalid-distance.md`.
+- Reproduced `TODO/streaming.md` from a real `.mjs` against
+  `dist/node/index.js`: `deflateSync` and callback `deflate()` are
+  byte-identical and valid; streaming `Deflate` is rejected by both
+  `zlib.inflateRawSync` ("invalid distance too far back") and fflate's
+  `inflateSync` ("invalid distance") at levels 1, 3, 6 and 9.
+- Root cause: `dflt`'s `const maxd = Math.min(32767, i)`
+  (`src/index.ts:741`) assumes `i` counts real emitted bytes. In the
+  streaming path `dat` is `dfltInit`'s 98304-byte scratch buffer whose
+  first 32768 bytes are reserved, still-zero lookback space
+  (`src/index.ts:1424-1427`), so `i` overstates the byte count by 32768
+  and the match finder can pick a match inside the zero pad.
+- Files changed: `specs/2026-08-08-streaming-deflate-invalid-distance.md`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - The fastest way to localize a deflate mis-encoding here is to log
+    every emitted `(i, l, d)` from the `if (d)` branch of `dflt` for the
+    sync and streaming runs and diff them. Streaming indices are offset
+    by exactly 32768; subtract that and the two lists line up, so the
+    first differing entry is the culprit. Pairs well with a log in
+    `inflt`'s `if (bt < dt)` branch, which prints the decoder's own
+    `bt`/`dt` at the moment it rejects.
+  - "The output diverges at byte 0" does NOT mean the encoder diverged
+    early. A small input is one dynamic-Huffman block, so a single bad
+    symbol anywhere rewrites the code-length tree and therefore byte 0.
+    Do not take a first-differing-byte offset as a position in the input.
+  - `dfltInit` (`src/index.ts:1415`) is the single construction point for
+    the streaming state of `Deflate`, `Gzip` and `Zlib`. A state field
+    added there covers all three; `deflateSync`/`dopt` build their own
+    `{ l:1 }` state and pick up the `|| 0` default.
+  - `DeflateState` and `InflateState` both have a `b` member with
+    unrelated meanings if US-013 uses that name. Not a conflict, but
+    confusing to read.
+  - `dopt` sizes the hash table from `dat.length`, which for a streaming
+    class is the whole 98304-byte scratch buffer. That yields `plvl = 18`
+    (a 512 KB `head` array per stream) versus 12 for a small
+    `deflateSync` call. Harmless for correctness -- all 31 shared matches
+    on the EMF input were identical -- but a real memory wart if anyone
+    goes looking.
+  - Verified `npx tsc --noEmit` clean and `npm run lint` clean. Skipped
+    the full `npm test` deliberately: the tree is unchanged apart from
+    two markdown-ish files, so there is nothing new for it to cover.
+---
+## 2026-08-08 - US-013 Fix streaming Deflate so it never emits an out-of-window distance
+
+- Applied the fix designed in US-012's diagnosis, verbatim: added a `b`
+  member to `DeflateState` meaning "index of the first legal
+  back-reference target in `dat`", changed `dflt`'s match bound at
+  `src/index.ts` from `Math.min(32767, i)` to
+  `Math.min(32767, i - (st.b || 0))`, seeded it to 32768 in `dfltInit`
+  (or to `32768 - dict.length` when a dictionary is supplied, since
+  dictionary bytes ARE resolvable), and reset it to 0 after the wrap copy
+  in `Deflate.push`.
+- Added `test/10-stream-window.ts` (35 assertions) and wired it into
+  `test/index.ts`. It covers the 234-byte EMF prefix at levels 1/3/6/9
+  crossed with one-push and 1-byte-push shapes, asserting recovery
+  through BOTH `inflateSync` and node's `zlib.inflateRawSync`; a
+  `ZipDeflate`-through-`Zip` case at all four levels read back with
+  `unzipSync`; the four pre-fix `deflateSync` byte lengths
+  (155/153/153/153); and a long-range-match assertion.
+- Added the base-index invariant to `CLAUDE.md`, and flipped the spec
+  header to FIXED.
+- Files changed: `src/index.ts`, `test/10-stream-window.ts`,
+  `test/index.ts`, `CLAUDE.md`,
+  `specs/2026-08-08-streaming-deflate-invalid-distance.md`,
+  `specs/prd.json`, `progress.log`.
+
+- **Learnings for future iterations:**
+  - The whole fix is one subtraction in one expression. `dflt` has
+    exactly ONE place where a candidate distance becomes a committed one:
+    `d = dif` inside the `while (dif <= maxd && ...)` loop. The inner
+    "rarest 2-byte sequence" search only reseeds `pimod`, and the loop
+    guard is re-evaluated before the next candidate, so bounding `maxd`
+    is sufficient. Do not add a second check.
+  - `dfltInit` is the single state-construction point for `Deflate`,
+    `Gzip` and `Zlib`, and `Deflate.push` holds the ONLY wrap copy
+    (`this.b.set(this.b.subarray(-32768))`). `Gzip.push` and `Zlib.push`
+    delegate. So two edits covered all three classes -- confirmed by
+    grepping for `s.i = 32766` and `subarray(-32768)`.
+  - A too-large base is silent in the opposite direction: it costs
+    compression ratio rather than corrupting bytes, and nothing in the
+    suite would notice. That is why `test/10-stream-window.ts` ends with
+    an 80 KB repeating-unit case asserting the output stays under 4 KB
+    (it comes out at 1037 bytes). Keep that assertion.
+  - Do NOT write the `deflateSync` size expectations by reading them off
+    the post-fix tree -- that is tautological. They were measured on the
+    pre-fix tree first (level 1 is 155, not 153; the report's 153 is the
+    level-3 number) and only then hardcoded.
+  - The failing state throws rather than failing an assertion: tapzero
+    lets the `FlateError: invalid distance` escape from `inflateSync` and
+    aborts the file. That still proves the test is a real guard, but the
+    output is a stack trace, not a `not ok` line.
+  - `DeflateOptions['level']` is the right annotation for a level array.
+    Writing `[1, 3, 6, 9] as const` and passing an element to
+    `new Deflate({ level })` does not typecheck.
+  - Fuzzed the fix before running the suite: 6000 streaming-Deflate cases
+    (400 inputs of 1..5000 bytes over uniform-random / 60-percent-zero /
+    periodic generators, levels 1/6/9, chunk shapes
+    {whole, 1, 7, 64, 200}), 126 `Gzip`/`Zlib` wrapper cases up to
+    300000 bytes, and 18 dictionary cases both with and without the
+    `dictionary` option -- 0 failures. The dictionary cases matter
+    specifically because that is the one branch where the base is not
+    32768.
+  - Verified: `npx tsx test/10-stream-window.ts` 35/35,
+    `test/0-valid.ts` 13/13, `test/1-size.ts` 15/15, full `npm test`
+    (node 217/217, browser 346/346 across both the plain and min
+    passes), `npm run lint` clean, `tsc --noEmit` clean against both
+    `tsconfig.json` and `tsconfig.build.json`.
+---

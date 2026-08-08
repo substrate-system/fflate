@@ -1,16 +1,41 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "moduleResolution": "bundler",
-    "module": "commonjs",
-    "target": "es5",
-    "rootDir": "src/",
-    "outDir": "lib/",
-    "types": ["node"],
+    "listFiles": true,
+    "module": "ES2022",
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "WebWorker"],
+    "types": ["node", "vite/client"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "strict": false,
     "noImplicitAny": true,
-    "esModuleInterop": false,
-    "ignoreDeprecations": "6.0"
+    "sourceMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationDir": "dist",
+    "declarationMap": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "paths": {
+      "fflate": ["./src/index.ts"],
+      "react": ["./node_modules/preact/compat/"],
+      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
+      "react-dom": ["./node_modules/preact/compat/"],
+      "react-dom/client": ["./node_modules/preact/compat/client"],
+      "react-dom/*": ["./node_modules/preact/compat/*"]
+    }
   },
-  "include": ["src/*.ts"]
+  "include": [
+    "example",
+    "src/**/*",
+    "test",
+    "scripts"
+  ]
 }

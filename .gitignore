@@ -1,13 +1,7 @@
 node_modules/
-lib/
-esm/
+dist/
+public/
 .DS_STORE
 # Rust version - available when ready
 rs/*/target/
 rs/*/Cargo.lock
-
-.DS_STORE
-umd/
-# for demo
-.parcel-cache
-dist/

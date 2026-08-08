@@ -1,0 +1,237 @@
+{
+  "project": "@substrate-system/fflate",
+  "branchName": "ralph/fflate-issues",
+  "description": "Fix the open issues tracked in TODO/README.md, sourced from the upstream 101arrowz/fflate issue list. Ordered so that low-risk API additions land before the deep DEFLATE correctness bugs, since a stall in the loop halts everything after it.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Make FlateError a real exported class",
+      "description": "As a consumer catching errors from fflate, I want `error instanceof FlateError` to work so that I can tell a corrupt archive apart from an unrelated failure like out-of-memory.",
+      "acceptanceCriteria": [
+        "`FlateError` in src/index.ts becomes a class extending Error exported as a runtime value, replacing the current `export interface FlateError extends Error` at src/index.ts:221",
+        "The class keeps the `code: number` property and sets `name` to 'FlateError'; the message strings from the `ec` array at src/index.ts:200 are unchanged",
+        "`err()` (src/index.ts:228) constructs the class and still supports its `msg` override and `nt` no-throw argument",
+        "Add the class to the `bInflt` and `bDflt` payload arrays (src/index.ts:1096-1097) next to `err`, because `err` is stringified into the worker and would otherwise throw ReferenceError there",
+        "`keepNames` stays false in every esbuild config and no terser `compress` options are added (see CLAUDE.md Invariants)",
+        "A node test asserts that a sync API (e.g. inflateSync on corrupt input) throws a value satisfying `instanceof FlateError` with the expected `.code`",
+        "Existing `import type { FlateError }` style usages still compile",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "FlateError is now a class in src/index.ts and is listed in bInflt. Deliberately NOT added to bDflt: that payload has no err and no deflate path constructs a FlateError. Async/worker errors are still plain Errors -- see US-002."
+    },
+    {
+      "id": "US-002",
+      "title": "Preserve FlateError identity across the async and worker boundary",
+      "description": "As a consumer of the async APIs, I want errors delivered to my callback to be `instanceof FlateError` so that the check works the same way it does for the sync APIs.",
+      "acceptanceCriteria": [
+        "Errors passed to callbacks of the async APIs (e.g. `inflate`, `unzip`) and to `AsyncFlateStreamHandler` are `instanceof FlateError` with the correct `.code`",
+        "Errors crossing back from a worker are rehydrated on the main thread, since structured clone drops the class prototype",
+        "A node test covers at least one callback-style async API and one worker-backed streaming class",
+        "test/3-node-min.ts still passes against dist/node/index.min.js",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Rehydration lives in `rhyd`, called from `wrkr` (src/index.ts), the single choke point every async API and worker-backed stream goes through. Both spawners already preserve the numeric `code`; only the prototype was lost. Covered by test/5-async-error.ts against dist/node/index{,.min}.js."
+    },
+    {
+      "id": "US-003",
+      "title": "Expose external file attributes and isDirectory on UnzipFileInfo",
+      "description": "As someone reconstructing a directory tree from a ZIP, I want to know whether a central-directory entry is a directory so that I can tell a directory apart from an empty file without guessing from a trailing slash.",
+      "acceptanceCriteria": [
+        "`UnzipFileInfo` (src/index.ts:3600) gains `attrs: number` (the external file attributes from the central directory record) and `isDirectory: boolean`",
+        "`isDirectory` is true when the MS-DOS directory bit (0x10) is set in the low byte, or the unix S_IFDIR bit is set in the high 16 bits, or the name ends with '/'",
+        "The filter object literals in BOTH `unzip` (near src/index.ts:3955) and `unzipSync` (near src/index.ts:4019) are updated in this same commit -- declaration emit fails otherwise (see CLAUDE.md Invariants)",
+        "Doc comments explain the attribute layout and which platforms populate it",
+        "A node test unzips a fixture archive containing a directory entry, an empty file, and a normal file, and asserts isDirectory for each",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "From TODO/metadata.md."
+    },
+    {
+      "id": "US-004",
+      "title": "Expose isDirectory on the streaming UnzipFile",
+      "description": "As a user of the streaming `Unzip` class, I want the same directory signal that `unzip`/`unzipSync` give me so that streaming extraction can rebuild a directory tree too.",
+      "acceptanceCriteria": [
+        "`UnzipFile` (src/index.ts:3642) gains `isDirectory: boolean`",
+        "The object literal in `Unzip.push` that ends `} as UnzipFile` (src/index.ts:3860) is updated -- the assertion suppresses the missing-property check, so the build stays green while the property is absent at runtime (see CLAUDE.md Invariants)",
+        "Local file headers carry no external attributes, so the streaming value is derived from the trailing '/' convention; the doc comment states this limitation explicitly and points at UnzipFileInfo.attrs for the reliable signal",
+        "A browser test in test/browser exercises `Unzip` over an archive with a directory entry and asserts isDirectory is present and correct at runtime",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Derived from the trailing '/' convention via isdir(0, fn) -- local file headers have no external attributes field. Covered by the browser test `Unzip streaming isDirectory` in test/browser/zip.ts."
+    },
+    {
+      "id": "US-005",
+      "title": "Expose the raw filename bytes on UnzipFileInfo",
+      "description": "As someone opening archives whose filenames are cp866 or another non-UTF-8 encoding, I want the undecoded name bytes so that I can decode them myself with the right TextDecoder.",
+      "acceptanceCriteria": [
+        "`UnzipFileInfo` gains `rawName: Uint8Array` (the filename bytes exactly as stored) and `nameIsUTF8: boolean` (bit 11 of the general purpose bit flag)",
+        "`name` keeps its current decoding behavior -- this is additive only",
+        "The filter object literals in BOTH `unzip` and `unzipSync` are updated in this same commit, for the same declaration-emit reason as US-003",
+        "A node test builds an archive with a non-UTF-8 filename, confirms `nameIsUTF8` is false, and confirms `new TextDecoder('cp866').decode(info.rawName)` yields the expected string",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "`zh` now also returns the raw filename subarray and bit 11 of the general purpose bit flag; both filter literals pass them through as `rawName` / `nameIsUTF8`. `rawName` is a VIEW onto the caller's buffer, not a copy, to avoid an allocation per central directory entry. Covered by test/7-unzip-rawname.ts."
+    },
+    {
+      "id": "US-006",
+      "title": "Expose the raw filename bytes on the streaming UnzipFile",
+      "description": "As a user of the streaming `Unzip` class, I want the same raw filename bytes so that non-UTF-8 archives decode correctly in the streaming path.",
+      "acceptanceCriteria": [
+        "`UnzipFile` gains `rawName: Uint8Array` and `nameIsUTF8: boolean`",
+        "The `} as UnzipFile` literal in `Unzip.push` (src/index.ts:3860) is updated, for the same runtime-absence reason as US-004",
+        "A browser test drives `Unzip` over an archive with a non-UTF-8 filename and asserts the raw bytes round-trip through the correct TextDecoder",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Depends on US-005. From TODO/unzip-non-utf8-artchives.md."
+    },
+    {
+      "id": "US-007",
+      "title": "Document decoding non-UTF-8 ZIP filenames in the README",
+      "description": "As a new user hitting mojibake filenames, I want a documented recipe so that I do not have to discover rawName by reading the type definitions.",
+      "acceptanceCriteria": [
+        "README.md gains a short section showing how to detect `nameIsUTF8 === false` and decode `rawName` with a TextDecoder, for both `unzipSync` and the streaming `Unzip` class",
+        "The section notes that `name` remains the UTF-8 decoding and that fflate does not guess an encoding",
+        "No em dashes and no arrow characters, per the docs conventions",
+        "Do NOT run `npm run build-docs` -- it overwrites docs/ which also holds implementation plans",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added a `### Non-UTF-8 Filenames` subsection to README.md under Example, plus a TOC entry. Covers unzipSync/unzip (filter argument) and streaming Unzip, the view-vs-copy difference in rawName, and that fflate does not guess an encoding. Docs-only change; the recipe was executed verbatim against the cp866 fixture before committing."
+    },
+    {
+      "id": "US-008",
+      "title": "Stop emitting zero-length non-final chunks from streaming decompression",
+      "description": "As a consumer of the streaming `Gunzip`/`Inflate` callbacks, I want no empty intermediate chunks so that the 0.8.3 sync-flush work does not change the emission pattern that downstream code relied on.",
+      "acceptanceCriteria": [
+        "Reproduce TODO/callback.md first: gzip 'hello world', push it through `new Gunzip(cb)` with final=true, and observe the current [11/false, 0/false, 0/true] sequence",
+        "After the fix, a zero-length chunk is never emitted with `final: false`",
+        "Exactly one callback still fires with `final: true`, so end-of-stream is never lost even when the last chunk is empty",
+        "The behavior is consistent across `Inflate`, `Gunzip`, `Unzlib`, and `Decompress`",
+        "Sync-flush boundaries still work: a `flush()` that produces real bytes still emits them",
+        "Regression tests cover the callback.md repro and the flush-still-works case",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "From TODO/callback.md. Fixed in the shared `Inflate.c`, which Gunzip/Unzlib call through and Decompress delegates to. Gunzip now emits [data/false, empty/true] rather than a single [data/true]: collapsing to one callback would require buffering the last member across the concatenated-member probe. Covered by test/8-stream-chunks.ts."
+    },
+    {
+      "id": "US-009",
+      "title": "Document the streaming callback emission contract",
+      "description": "As a consumer writing against `FlateStreamHandler`, I want the emission guarantees written down so that I do not assume 'one callback for small inputs' again.",
+      "acceptanceCriteria": [
+        "Doc comments on `FlateStreamHandler` and `AsyncFlateStreamHandler` state that a handler may be called any number of times, that consumers must concatenate chunks rather than capture one, and that exactly one call has final=true",
+        "CHANGELOG.md records the 0.8.3 emission change and the US-008 fix",
+        "No em dashes and no arrow characters, per the docs conventions",
+        "Do NOT run `npm run build-docs`",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Depends on US-008. From TODO/callback.md questions 1 and 3."
+    },
+    {
+      "id": "US-010",
+      "title": "Diagnose the flush(true) invalid stored block lengths bug",
+      "description": "As a maintainer, I want a written root cause for the corrupt sync-flush output so that the fix session starts from a diagnosis instead of a symptom.",
+      "acceptanceCriteria": [
+        "Reproduce TODO/flush.md: deflate 70000 'a' characters, call `flush(true)`, push an empty final chunk, and confirm node's `zlib.inflateRawSync` reports 'invalid stored block lengths' while the flush(false) path succeeds",
+        "Use a real .mjs or .cjs file for the repro, never `node --input-type=module -e` (see CLAUDE.md Gotchas)",
+        "Determine the size threshold at which the bug appears and record it",
+        "Write specs/2026-08-08-flush-sync-corruption.md naming the responsible function and line range in src/index.ts and describing the mechanism, e.g. how the empty stored block's LEN/NLEN or the buffer position is computed at a flush boundary",
+        "The doc states what the correct byte sequence should be per RFC 1951 section 3.2.4",
+        "No source or test changes in this story",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "From TODO/flush.md. Investigation only, so the commit does not need a passing new test."
+    },
+    {
+      "id": "US-011",
+      "title": "Fix flush(true) so sync-flushed output inflates",
+      "description": "As a user calling `.flush(true)` on a `Deflate` stream, I want the result to inflate correctly so that sync flushes are usable for large inputs.",
+      "acceptanceCriteria": [
+        "Implement the fix identified in specs/2026-08-08-flush-sync-corruption.md",
+        "A regression test compresses 70000 'a' characters through the flush(true) path and asserts that both fflate's `inflateSync` and node's `zlib.inflateRawSync` recover the exact input",
+        "The test also covers a size below the threshold found in US-010 and at least one multi-flush sequence",
+        "The flush(false) path and existing streaming output are unchanged",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Depends on US-010. From TODO/flush.md."
+    },
+    {
+      "id": "US-012",
+      "title": "Diagnose the streaming Deflate invalid distance bug",
+      "description": "As a maintainer, I want a written root cause for streaming `Deflate` emitting out-of-window back-references so that the fix session starts from a diagnosis instead of a symptom.",
+      "acceptanceCriteria": [
+        "Reproduce TODO/streaming.md using the 234-byte base64 EMF prefix in that file, from a real .mjs or .cjs file rather than `node --input-type=module -e`",
+        "Confirm the reported shape: `deflateSync` and callback `deflate()` are byte-identical and valid, streaming `Deflate` is the same length but different bytes and rejected by both fflate's `inflateSync` and node's `zlib.inflateRawSync` with an invalid-distance error",
+        "Identify where the divergence begins and why the streaming path allows a distance larger than the bytes fed so far, e.g. window base or hash-chain bookkeeping that `deflateSync` gets right",
+        "Write specs/2026-08-08-streaming-deflate-invalid-distance.md naming the responsible function and line range in src/index.ts and describing the mechanism",
+        "Record whether the cause overlaps with US-010, since both involve streaming block boundaries",
+        "No source or test changes in this story",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "From TODO/streaming.md. Investigation only; no source or test changes. Root cause written up in specs/2026-08-08-streaming-deflate-invalid-distance.md: dflt's maxd bound (src/index.ts:741) uses the scratch-buffer index i, which is 32768 too large while dfltInit's reserved lookback region is still zero-filled. No overlap with US-010."
+    },
+    {
+      "id": "US-013",
+      "title": "Fix streaming Deflate so it never emits an out-of-window distance",
+      "description": "As a user streaming compression through `Deflate` or `ZipDeflate`, I want valid DEFLATE output so that off-the-shelf inflaters can read it.",
+      "acceptanceCriteria": [
+        "Implement the fix identified in specs/2026-08-08-streaming-deflate-invalid-distance.md",
+        "A regression test runs the 234-byte EMF prefix through streaming `Deflate` and asserts both fflate's `inflateSync` and node's `zlib.inflateRawSync` recover the exact input",
+        "The test covers levels 1, 3, 6, and 9 and at least two chunk shapes, e.g. one push and 1-byte pushes, since TODO/streaming.md reports the bug is independent of both",
+        "A `ZipDeflate` case is covered too, since that wrapper is where the bug was originally found",
+        "Existing deflateSync output is byte-for-byte unchanged, verified against the existing test/1-size expectations",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Fixed per specs/2026-08-08-streaming-deflate-invalid-distance.md: DeflateState gained a `b` base index, dflt bounds maxd by `i - (st.b || 0)`, dfltInit seeds it to 32768 (or to the dictionary start), and Deflate.push resets it to 0 after the wrap copy. Regression guard is test/10-stream-window.ts."
+    },
+    {
+      "id": "US-014",
+      "title": "Unexpected EOF when inflating a specific ZIP",
+      "description": "As a user with an archive that ubuntu unzip, yauzl, and python3 all read, I want fflate to read it too instead of throwing 'unexpected EOF'.",
+      "acceptanceCriteria": [
+        "Obtain a reproducing archive: the URL in TODO/eof-inflate-zip.md (https://public.chard.com/fflate/address.zip) returns HTTP 404 as of 2026-08-08, so a replacement sample or a synthetic archive with the same trait is required before this can be worked",
+        "Identify which structural feature triggers it, e.g. a data descriptor with zero sizes in the local header, ZIP64 fields, or a spanning signature",
+        "Fix the handling and add a regression test built from a checked-in fixture",
+        "Typecheck passes",
+        "npm test passes (node and browser suites, plain and minified)"
+      ],
+      "priority": 14,
+      "passes": false,
+      "manual": true,
+      "notes": "Blocked and excluded from the autonomous loop: the only reproducer is a 404 URL, so an agent cannot obtain the failing input. Needs a human to supply an archive or narrow the trigger. From TODO/eof-inflate-zip.md."
+    }
+  ]
+}

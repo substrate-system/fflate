@@ -111,23 +111,94 @@ dist/
 
 ### tsconfig
 
-`tsconfig.json` currently targets the old CommonJS build and must change:
+`tsconfig.json` is replaced with the template's, with two deviations
+recorded below:
 
-| option | from | to |
-| --- | --- | --- |
-| `target` | `es5` | `es2022` |
-| `module` | `commonjs` | `es2022` |
-| `outDir` | `lib/` | `dist/` |
-| `lib` | (implicit) | `["ES2022", "DOM", "WebWorker"]` |
-| `types` | `["node"]` | `["node"]` (kept) |
+```json
+{
+  "compilerOptions": {
+    "listFiles": true,
+    "module": "ES2022",
+    "target": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "WebWorker"],
+    "types": ["node", "vite/client"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": false,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationDir": "dist",
+    "declarationMap": true
+  },
+  "include": [
+    "example",
+    "src/**/*",
+    "test",
+    "scripts"
+  ]
+}
+```
 
-`lib` must be set explicitly. `src/worker.ts` references `Worker`,
-`URL.createObjectURL`, and `Blob`, which the current configuration only
-picks up via the default lib for an ES5 target.
+This moves `target` from `es5`, `module` from `commonjs`, and `outDir`
+from `lib/`. Setting `lib` explicitly is required: `src/worker.ts`
+references `Worker`, `URL.createObjectURL`, and `Blob`, which the current
+configuration only picks up via the default lib for an ES5 target.
+
+#### Deviation 1: `types`
+
+The template uses `["vite/client"]`; fflate uses `["node", "vite/client"]`.
+Node types are required by `src/node-worker.ts` (the `node:worker_threads`
+import), `test/util.ts` (`Buffer`, `process`, `perf_hooks` globals), and
+`scripts/*.ts`. Measured: the template value verbatim fails with
+`TS2688: Cannot find type definition file for 'vite/client'` until vite is
+installed, and drops every node global thereafter.
+
+#### Deviation 2: `strict`
+
+The template sets `"strict": true`. fflate keeps `"strict": false,
+"noImplicitAny": true`. Measured error counts against `src/**/*`:
+
+| configuration | errors |
+| --- | --- |
+| `strict: false, noImplicitAny: true` (chosen) | 0 |
+| `strict: true` (template) | 180 |
+| `strict: true` less `strictPropertyInitialization` | 126 |
+| the above, less `strictNullChecks` | 25 |
+
+Of the 180: 54 are `strictPropertyInitialization` on uninitialized class
+properties, roughly 101 are `strictNullChecks` (the codebase passes `null`
+into callback error slots throughout, e.g. `cb(null, d)` at
+`src/worker.ts:15`), and 25 remain from `strictFunctionTypes`,
+`noImplicitThis`, and `useUnknownInCatchVariables` -- including 12
+instances of `TS2554: Expected 1-2 arguments, but got 3`.
+
+Every one is in vendored upstream code. Enabling `strict` would mean ~180
+edits to `src/index.ts`, which conflicts with the same constraint that
+keeps `src/` out of the linter: this repository merges from
+`git remote upstream` (`101arrowz/fflate`), and rewriting `src/` turns
+every future merge into a conflict.
+
+#### Other tsconfig files
 
 `tsconfig.esm.json` and `tsconfig.demo.json` are deleted.
-`tsconfig.build.json` is retained; its `exclude` list gains `example` in
-place of the removed `demo`.
+`tsconfig.build.json` is retained; its `exclude` list becomes
+`["example", "test", "scripts"]`.
+
+`test/tsconfig.json` currently sets `module`/`moduleResolution` to
+`nodenext`, which conflicts with the root `Bundler` resolution. It is
+removed; the node suite runs under `tsx`, which does not need it.
+
+Note that `listFiles: true` is carried over from the template for parity.
+It makes `tsc` print every file it loads, so build output is verbose.
 
 ### Build pipeline
 
@@ -137,7 +208,8 @@ A single `scripts/build.ts`, run under `tsx`, replaces `scripts/rewriteBuilds.ts
 Steps:
 
 1. Remove `dist/`.
-2. **Declarations.** One `tsc --emitDeclarationOnly` pass. `index.d.ts` is
+2. **Declarations.** One `tsc --emitDeclarationOnly --project tsconfig.build.json`
+   pass, which excludes `example`, `test`, and `scripts`. `index.d.ts` is
    copied to both `dist/browser/` and `dist/node/`; the public API is
    identical between the two. Emitted `worker.d.ts` and `node-worker.d.ts`
    are discarded, since both builds are bundled.
@@ -345,5 +417,7 @@ would publish the compiled library to `gh-pages` instead of the demo.
 ## Out of scope
 
 - Reformatting or linting `src/`.
+- Enabling TypeScript `strict` mode, which would require ~180 edits to
+  `src/`. See tsconfig Deviation 2.
 - Changing typedoc configuration or the tracked `docs/` output.
 - Any change to the compression algorithms themselves.

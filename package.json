@@ -1,87 +1,94 @@
 {
   "name": "@substrate-system/fflate",
   "type": "module",
-  "version": "0.8.17",
+  "version": "0.9.0",
   "description": "High performance (de)compression in an 8kB package",
-  "main": "dist/index.js",
+  "main": "./dist/node/index.js",
+  "module": "./dist/browser/index.js",
+  "types": "./dist/browser/index.d.ts",
+  "unpkg": "./dist/umd/fflate.js",
   "files": [
-    "./dist/*",
-    "./esm/*",
-    "./lib/*",
-    "./umd/*"
+    "dist"
   ],
   "exports": {
     ".": {
       "node": {
-        "import": {
-          "types": "./esm/index.d.mts",
-          "default": "./esm/index.mjs"
-        },
-        "require": {
-          "types": "./lib/node.d.cts",
-          "default": "./lib/node.cjs"
-        }
+        "types": "./dist/node/index.d.ts",
+        "default": "./dist/node/index.js"
       },
-      "import": {
-        "types": "./esm/browser.d.ts",
-        "default": "./esm/browser.js"
-      },
-      "require": {
-        "types": "./lib/browser.d.cts",
-        "default": "./lib/browser.cjs"
+      "default": {
+        "types": "./dist/browser/index.d.ts",
+        "default": "./dist/browser/index.js"
       }
     },
     "./node": {
-      "import": {
-        "types": "./esm/index.d.mts",
-        "default": "./esm/index.mjs"
-      },
-      "require": {
-        "types": "./lib/node.d.cts",
-        "default": "./lib/node.cjs"
-      }
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./node/min": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.min.js"
     },
     "./browser": {
-      "import": {
-        "types": "./esm/browser.d.ts",
-        "default": "./esm/browser.js"
-      },
-      "require": {
-        "types": "./lib/browser.d.cts",
-        "default": "./lib/browser.cjs"
-      }
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.js"
     },
+    "./min": {
+      "types": "./dist/browser/index.d.ts",
+      "default": "./dist/browser/index.min.js"
+    },
+    "./umd": "./dist/umd/fflate.js",
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-cjs:min && npm run build:lib",
-    "build-cjs": "esbuild src/*.ts --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
-    "build-cjs:min": "esbuild src/*.ts --format=cjs --minify --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.min.cjs --sourcemap",
-    "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
-    "build-esm:min": "esbuild ./src/*.ts --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
-    "build-example": "mkdir -p ./public && rm -rf ./public/* && VITE_DEBUG_MODE=staging vite --mode staging --base=\"/repo-name\" build",
+    "lint": "eslint \"./**/*.{ts,js}\"",
+    "build": "tsx scripts/build.ts",
+    "build-example": "vite build --base=\"/fflate/\"",
+    "build-docs": "typedoc --plugin typedoc-plugin-markdown --hideBreadcrumbs --readme none --disableSources --excludePrivate --excludeProtected --expandParameters --githubPages false --cleanOutputDir false --out docs/ src/index.ts",
+    "gh-pages": "tsx scripts/cpGHPages.ts",
+    "start": "vite",
+    "test": "npm run build && npm run test:node && npm run test:browser",
+    "test:node": "tsx test/index.ts",
+    "test:valid": "tsx test/0-valid.ts",
+    "test:browser": "esbuild test/browser/index.ts --bundle | tapout --timeout 30000",
+    "toc": "markdown-toc --maxdepth 3 -i README.md",
+    "preversion": "npm run lint",
     "version": "npm run toc && auto-changelog -p --template keepachangelog --breaking-pattern 'BREAKING CHANGE:' && git add CHANGELOG.md README.md",
     "postversion": "git push --follow-tags && npm publish",
-    "prepublishOnly": "npm run build",
-    "toc": "markdown-toc --maxdepth 3 -i README.md",
-    "start": "vite",
-    "//build": "npm run build:lib && npm run build:docs && npm run build:demo",
-    "script": "tsx scripts/$SC.ts",
-    "build:lib": "tsc && tsc --project tsconfig.esm.json && npm run build:rewrite && npm run build:umd",
-    "build:umd": "SC=buildUMD npm run script",
-    "build:rewrite": "SC=rewriteBuilds npm run script",
-    "build:demo": "tsc --project tsconfig.demo.json && parcel build demo/index.html --no-cache --public-url \"./\" && SC=cpGHPages npm run script",
-    "build:docs": "typedoc --plugin typedoc-plugin-markdown --hideBreadcrumbs --readme none --disableSources --excludePrivate --excludeProtected --expandParameters --githubPages false --out docs/ src/index.ts",
-    "test": "tsx test/index.ts",
-    "test:valid": "tsx test/0-valid.ts"
+    "prepublishOnly": "npm run build"
   },
-  "repository": "https://github.com/substrate-system/fflate",
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@substrate-system/tapout": "^0.0.41",
+    "@substrate-system/tapzero": "^0.10.13",
+    "@types/node": "^25.8.0",
+    "@types/pako": "*",
+    "auto-changelog": "^2.5.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.8.1",
+    "jszip": "^3.10.1",
+    "markdown-toc": "^1.2.0",
+    "newneostandard": "^0.14.2",
+    "pako": "*",
+    "preact": "^10.25.4",
+    "simple-git": "^3.19.1",
+    "terser": "^5.47.1",
+    "tiny-inflate": "*",
+    "tsx": "^4.19.3",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0",
+    "uzip": "*",
+    "vite": "^8.2.1",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-build": "^7.4.1",
+    "workbox-window": "^7.4.1"
+  },
+  "repository": "https://github.com/mycelial-systems/fflate",
   "bugs": {
-    "email": "arjunbarrett@gmail.com",
-    "url": "https://github.com/substrate-system/fflate/issues"
+    "url": "https://github.com/mycelial-systems/fflate/issues"
   },
-  "author": "Arjun Barrett <arjunbarrett@gmail.com>",
-  "license": "MIT",
   "keywords": [
     "gzip",
     "gunzip",
@@ -100,27 +107,6 @@
     "unzip",
     "non-blocking"
   ],
-  "devDependencies": {
-    "@parcel/service-worker": "^2.9.3",
-    "@substrate-system/tapzero": "^0.10.13",
-    "@types/node": "^25.8.0",
-    "@types/pako": "*",
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "auto-changelog": "^2.5.0",
-    "esbuild": "^0.25.0",
-    "jszip": "^3.10.1",
-    "markdown-toc": "^1.2.0",
-    "pako": "*",
-    "parcel": "^2.9.3",
-    "preact": "^10.25.4",
-    "simple-git": "^3.19.1",
-    "terser": "^5.47.1",
-    "tiny-inflate": "*",
-    "tsx": "^4.19.3",
-    "typedoc": "^0.28.19",
-    "typedoc-plugin-markdown": "^4.11.0",
-    "typescript": "^6.0.3",
-    "uzip": "*"
-  }
+  "author": "Arjun Barrett <arjunbarrett@gmail.com>",
+  "license": "MIT"
 }
